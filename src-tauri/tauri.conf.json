@@ -16,7 +16,7 @@
         "title": "Blend Stack",
         "width": 1100,
         "height": 720,
-        "minWidth": 980,
+        "minWidth": 520,
         "minHeight": 580,
         "center": true,
         "decorations": false,

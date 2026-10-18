@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 const DELAY = 450;
+/** Matches the icon-only tab breakpoint in styles.css. */
+const COMPACT_WIDTH = 640;
 
 /**
  * Replaces native `title` tooltips app-wide with tooltips in the app's style.
@@ -18,7 +20,7 @@ export function TooltipHost() {
       setTip(null);
     };
     const onOver = (e: PointerEvent) => {
-      const el = (e.target as HTMLElement).closest?.<HTMLElement>("[title], [data-tip]");
+      const el = (e.target as HTMLElement).closest?.<HTMLElement>("[title], [data-tip], [data-compact-tip]");
       if (!el) return;
       const title = el.getAttribute("title");
       if (title !== null) {
@@ -27,7 +29,8 @@ export function TooltipHost() {
       }
       if (el === target.current) return;
       hide();
-      const text = el.dataset.tip;
+      // Icon-only tabs explain themselves only while the window is narrow.
+      const text = el.dataset.tip ?? (window.innerWidth <= COMPACT_WIDTH ? el.dataset.compactTip : undefined);
       if (!text) return;
       target.current = el;
       timer.current = window.setTimeout(() => {

@@ -45,6 +45,7 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
   const tr = useT();
   const launch = useStore((s) => s.launch);
   const patchSettings = useStore((s) => s.patchSettings);
+  const updates = useUpdates(builds);
   const current = resolveDefault(builds, settings);
   if (!current) return null;
 
@@ -62,7 +63,10 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
   };
 
   return (
-    <div className={`card hero tone-${tone(current)}`}>
+    <div
+      className={`card hero tone-${tone(current)}`}
+      onContextMenu={(e) => openContextMenu(e, installedMenu(current, updates[current.id] ?? null))}
+    >
       <div className="hero-top">
         <Glyph build={current} size="xl" />
         <div style={{ minWidth: 0 }}>

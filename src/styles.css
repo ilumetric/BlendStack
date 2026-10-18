@@ -1926,3 +1926,119 @@ html:not(.translucent) .card {
     width: 200px;
   }
 }
+
+/* ───────────────────────── Narrow window ───────────────────────── */
+
+.seg-icon {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .brand-name {
+    display: none;
+  }
+
+  /* Tabs move into the flow so they never collide with the buttons. */
+  .titlebar {
+    gap: 6px;
+    padding-left: 14px;
+  }
+  .titlebar-center {
+    position: static;
+    transform: none;
+    margin: 0 auto;
+  }
+  .titlebar-actions {
+    margin-left: 0;
+  }
+  .segmented.large button {
+    min-width: 0;
+    padding: 5px 13px;
+  }
+
+  /* Library: version switcher on top, recent files below in two columns. */
+  .library {
+    display: flex;
+    flex-direction: column;
+  }
+  .library-side {
+    flex: none;
+    padding: 14px 14px 0;
+    border-right: 0;
+  }
+  .library-side > :not(.hero):not(.empty-hero) {
+    display: none;
+  }
+  .library-side .hero,
+  .library-side .empty-hero {
+    margin: 0;
+  }
+  .library-main {
+    flex: 1;
+    padding: 16px 14px 20px;
+  }
+  /* Two columns at the narrowest, more as the window grows. */
+  .files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  /* Builds and News: toolbar wraps, search takes the remaining room. */
+  .toolbar {
+    flex-wrap: wrap;
+    padding: 12px 14px 10px;
+  }
+  .toolbar .search {
+    flex: 1 1 160px;
+    width: auto;
+    min-width: 0;
+    margin-left: 0;
+  }
+  .toolbar-status {
+    display: none;
+  }
+  .toolbar > .icon-btn:last-child {
+    margin-left: auto;
+  }
+  .channel-intro {
+    padding: 0 16px 8px;
+  }
+  .banner {
+    margin: 0 14px 10px;
+  }
+  .builds-scroll {
+    padding: 0 10px 20px 14px;
+  }
+  .news-scroll {
+    padding: 2px 14px 20px;
+  }
+  .news-grid {
+    gap: 14px;
+  }
+  .news-card.featured {
+    flex-direction: column;
+    min-height: 0;
+  }
+  .news-card.featured .news-image {
+    flex: none;
+    aspect-ratio: 16 / 9;
+  }
+  .news-card.featured .news-body {
+    padding: 14px 16px 16px;
+  }
+  .news-card.featured .news-title {
+    font-size: 17px;
+  }
+}
+
+/* Very narrow: tabs become icons (names stay as tooltips). */
+@media (max-width: 640px) {
+  .titlebar .seg-icon {
+    display: inline-grid;
+  }
+  .titlebar .seg-label {
+    display: none;
+  }
+  .segmented.large button {
+    padding: 4px 13px;
+  }
+}

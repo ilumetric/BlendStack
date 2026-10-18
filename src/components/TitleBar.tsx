@@ -1,6 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Bell, Copy, Download, Heart, Minus, Settings as Gear, Square, X } from "lucide-react";
+import {
+  Bell,
+  Boxes,
+  Copy,
+  Download,
+  Heart,
+  LibraryBig,
+  MessagesSquare,
+  Minus,
+  Newspaper,
+  Settings as Gear,
+  Square,
+  X,
+} from "lucide-react";
 import { api } from "../lib/api";
 import logo from "../assets/logo.svg";
 import { useStore, type Tab } from "../store";
@@ -13,6 +26,16 @@ import type { RemoteChannel } from "../lib/types";
 
 /** The Blender Foundation's official donation page. */
 const DEVELOPMENT_FUND = "https://fund.blender.org/";
+
+/** Text label; in a narrow window only the icon is shown (see styles.css). */
+function tabLabel(icon: ReactNode, text: string) {
+  return (
+    <>
+      <span className="seg-icon">{icon}</span>
+      <span className="seg-label">{text}</span>
+    </>
+  );
+}
 
 type Panel = "downloads" | "notifications" | null;
 
@@ -61,7 +84,7 @@ export function TitleBar() {
     <header className="titlebar" data-tauri-drag-region>
       <div className="brand" data-tauri-drag-region>
         <img src={logo} alt="" draggable={false} />
-        Blend Stack
+        <span className="brand-name">Blend Stack</span>
       </div>
 
       <div className="titlebar-center">
@@ -70,10 +93,15 @@ export function TitleBar() {
           value={tab}
           onChange={setTab}
           segments={[
-            { value: "library", label: tr("tab.library") },
-            { value: "builds", label: tr("tab.builds"), dot: buildsNew > 0 },
-            { value: "news", label: tr("tab.news"), dot: newsNew },
-            { value: "chat", label: tr("tab.chat"), badge: tab === "chat" ? 0 : chatUnread },
+            { value: "library", label: tabLabel(<LibraryBig size={16} />, tr("tab.library")), title: tr("tab.library") },
+            { value: "builds", label: tabLabel(<Boxes size={16} />, tr("tab.builds")), title: tr("tab.builds"), dot: buildsNew > 0 },
+            { value: "news", label: tabLabel(<Newspaper size={16} />, tr("tab.news")), title: tr("tab.news"), dot: newsNew },
+            {
+              value: "chat",
+              label: tabLabel(<MessagesSquare size={16} />, tr("tab.chat")),
+              title: tr("tab.chat"),
+              badge: tab === "chat" ? 0 : chatUnread,
+            },
           ]}
         />
       </div>

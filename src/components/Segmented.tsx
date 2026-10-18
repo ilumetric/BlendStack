@@ -5,6 +5,8 @@ export interface Segment<T extends string> {
   label: ReactNode;
   badge?: number;
   dot?: boolean;
+  /** Tooltip shown when the label is reduced to an icon (narrow window). */
+  title?: string;
 }
 
 interface Props<T extends string> {
@@ -42,6 +44,7 @@ export function Segmented<T extends string>({ value, segments, onChange, large }
           role="tab"
           aria-selected={s.value === value}
           className={s.value === value ? "on" : ""}
+          data-compact-tip={s.title}
           onClick={() => onChange(s.value)}
         >
           {s.label}
