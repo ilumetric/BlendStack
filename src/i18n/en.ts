@@ -189,6 +189,8 @@ export const en = {
   "toast.upToDate": "No new builds",
   "toast.notBlend": "Only .blend files can be opened",
 
+  "fund.tooltip": "Support Blender — Development Fund",
+
   "window.minimize": "Minimize",
   "window.maximize": "Maximize",
   "window.close": "Close",

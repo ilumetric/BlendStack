@@ -4,9 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Blend Stack</title>
+    <script src="/boot.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Static frame painted before the UI bundle runs; React replaces it. -->
+    <div id="root">
+      <div class="app">
+        <header class="titlebar" data-tauri-drag-region>
+          <div class="brand"><img src="/src/assets/logo.svg" alt="" draggable="false" />Blend Stack</div>
+        </header>
+        <div class="content"></div>
+      </div>
+    </div>
+    <script src="/ready.js"></script>
   </body>
 </html>

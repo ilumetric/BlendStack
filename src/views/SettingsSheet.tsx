@@ -8,6 +8,7 @@ import { api, errorText } from "../lib/api";
 import type { AppUpdate, Settings } from "../lib/types";
 import { Backdrop, confirmDialog } from "../components/Dialogs";
 import { Switch } from "../components/bits";
+import { Select } from "../components/Select";
 import { revealLabel } from "./buildMenu";
 import logo from "../assets/logo.svg";
 
@@ -117,25 +118,25 @@ export function SettingsSheet() {
         <div className="sheet-body">
           <Group title={tr("settings.appearance")}>
             <Row label={tr("settings.theme")}>
-              <select
-                className="select"
+              <Select<Settings["theme"]>
                 value={settings.theme}
-                onChange={(e) => patch({ theme: e.target.value as Settings["theme"] })}
-              >
-                <option value="system">{tr("settings.theme.system")}</option>
-                <option value="light">{tr("settings.theme.light")}</option>
-                <option value="dark">{tr("settings.theme.dark")}</option>
-              </select>
+                onChange={(theme) => patch({ theme })}
+                options={[
+                  { value: "system", label: tr("settings.theme.system") },
+                  { value: "light", label: tr("settings.theme.light") },
+                  { value: "dark", label: tr("settings.theme.dark") },
+                ]}
+              />
             </Row>
             <Row label={tr("settings.language")}>
-              <select className="select" value={settings.language} onChange={(e) => patch({ language: e.target.value })}>
-                <option value="">{tr("settings.language.auto")}</option>
-                {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
+              <Select
+                value={settings.language}
+                onChange={(language) => patch({ language })}
+                options={[
+                  { value: "", label: tr("settings.language.auto") },
+                  ...LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
+                ]}
+              />
             </Row>
             {system.os !== "linux" && (
               <Row label={tr("settings.translucency")} hint={tr("settings.translucency.hint")}>
@@ -153,17 +154,11 @@ export function SettingsSheet() {
 
           <Group title={tr("settings.updates")}>
             <Row label={tr("settings.checkInterval")}>
-              <select
-                className="select"
+              <Select<number>
                 value={settings.checkIntervalMinutes}
-                onChange={(e) => patch({ checkIntervalMinutes: Number(e.target.value) })}
-              >
-                {INTERVALS.map((m) => (
-                  <option key={m} value={m}>
-                    {tr(`settings.interval.${m}`)}
-                  </option>
-                ))}
-              </select>
+                onChange={(checkIntervalMinutes) => patch({ checkIntervalMinutes })}
+                options={INTERVALS.map((m) => ({ value: m, label: tr(`settings.interval.${m}`) }))}
+              />
             </Row>
             <Row label={tr("settings.notifyStable")}>{toggle("notifyStable")}</Row>
             <Row label={tr("settings.notifyDaily")}>{toggle("notifyDaily")}</Row>

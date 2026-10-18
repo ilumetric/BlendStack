@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Bell, Copy, Download, Minus, Settings as Gear, Square, X } from "lucide-react";
+import { Bell, Copy, Download, Heart, Minus, Settings as Gear, Square, X } from "lucide-react";
+import { api } from "../lib/api";
 import logo from "../assets/logo.svg";
 import { useStore, type Tab } from "../store";
 import { useT } from "../i18n";
@@ -9,6 +10,9 @@ import { Ring } from "./bits";
 import { DownloadsPopover } from "../views/DownloadsPopover";
 import { NotificationsPopover } from "../views/NotificationsPopover";
 import type { RemoteChannel } from "../lib/types";
+
+/** The Blender Foundation's official donation page. */
+const DEVELOPMENT_FUND = "https://fund.blender.org/";
 
 type Panel = "downloads" | "notifications" | null;
 
@@ -73,6 +77,13 @@ export function TitleBar() {
       </div>
 
       <div className="titlebar-actions" data-tauri-drag-region>
+        <button
+          className="icon-btn heart"
+          title={tr("fund.tooltip")}
+          onClick={() => void api.openUrl(DEVELOPMENT_FUND)}
+        >
+          <Heart size={17} />
+        </button>
         <button
           ref={downloadsBtn}
           className={`icon-btn${panel === "downloads" ? " active" : ""}`}

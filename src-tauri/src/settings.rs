@@ -42,7 +42,7 @@ pub struct Settings {
     pub build_args: HashMap<String, String>,
     pub last_launched: HashMap<String, i64>,
     pub external_builds: Vec<String>,
-    /// Last window position and size (physical pixels).
+    /// Last window position and size.
     pub window: Option<WindowGeometry>,
 }
 
@@ -112,10 +112,11 @@ impl Settings {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowGeometry {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
+    /// Logical (DPI-independent) units.
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
     pub maximized: bool,
 }
 

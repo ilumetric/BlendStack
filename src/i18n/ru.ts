@@ -191,6 +191,8 @@ export const ru: Record<MessageKey, string> = {
   "toast.upToDate": "Новых сборок нет",
   "toast.notBlend": "Открывать можно только файлы .blend",
 
+  "fund.tooltip": "Поддержать Blender — Development Fund",
+
   "window.minimize": "Свернуть",
   "window.maximize": "Развернуть",
   "window.close": "Закрыть",

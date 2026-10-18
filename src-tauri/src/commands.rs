@@ -41,13 +41,13 @@ pub struct Bootstrap {
     pub notifications: Vec<AppNotification>,
 }
 
-fn system_info(app: &AppHandle, state: &AppState) -> SystemInfo {
+fn system_info(state: &AppState) -> SystemInfo {
     let settings = state.settings();
     SystemInfo {
         os: std::env::consts::OS,
         arch: std::env::consts::ARCH,
         app_version: env!("CARGO_PKG_VERSION"),
-        translucent: window::is_translucent(app, &settings),
+        translucent: window::translucent(&settings),
         default_library: state.paths.default_library().to_string_lossy().into_owned(),
         library: state
             .paths
@@ -61,10 +61,10 @@ fn system_info(app: &AppHandle, state: &AppState) -> SystemInfo {
 }
 
 #[tauri::command]
-pub fn get_bootstrap(app: AppHandle, state: State<'_, AppState>) -> Bootstrap {
+pub fn get_bootstrap(state: State<'_, AppState>) -> Bootstrap {
     Bootstrap {
         settings: state.settings(),
-        system: system_info(&app, &state),
+        system: system_info(&state),
         installed: state.installed(),
         downloads: state.downloads.list(),
         notifications: state.notifications.list(),
@@ -74,14 +74,15 @@ pub fn get_bootstrap(app: AppHandle, state: State<'_, AppState>) -> Bootstrap {
 /// Called once the UI has painted, so the window never flashes empty.
 #[tauri::command]
 pub fn app_ready(app: AppHandle, state: State<'_, AppState>) {
+    log::info!("ui ready {} ms after start", crate::since_start());
     if !state.started_hidden {
         crate::tray::show_main(&app);
     }
 }
 
 #[tauri::command]
-pub fn get_system_info(app: AppHandle, state: State<'_, AppState>) -> SystemInfo {
-    system_info(&app, &state)
+pub fn get_system_info(state: State<'_, AppState>) -> SystemInfo {
+    system_info(&state)
 }
 
 /// Merges a partial settings object into the current settings.

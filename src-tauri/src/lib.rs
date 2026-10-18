@@ -35,7 +35,15 @@ fn blend_files<I: IntoIterator<Item = String>>(args: I) -> Vec<String> {
         .collect()
 }
 
+/// Process start, for startup timing in the log.
+pub static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
+pub fn since_start() -> u128 {
+    STARTED.get().map(|t| t.elapsed().as_millis()).unwrap_or(0)
+}
+
 pub fn run() {
+    STARTED.get_or_init(std::time::Instant::now);
     let launched_hidden = std::env::args().any(|a| a == HIDDEN_FLAG);
     // Resolved before anything starts so logs and the WebView profile land
     // in the app's own folder too.
@@ -78,8 +86,18 @@ pub fn run() {
             let settings: Settings = read_json(&paths.settings_file());
             let library_dir = paths.library(&settings);
 
+            let hidden = launched_hidden && settings.start_minimized;
+            let state = AppState::new(paths.clone(), settings.clone(), hidden)?;
+            state
+                .pending_files
+                .lock()
+                .unwrap()
+                .extend(blend_files(std::env::args()));
+            app.manage(state);
+
             // The window is created here rather than from the config so its
-            // WebView profile can live next to the app data.
+            // WebView profile can live next to the app data, and so it opens
+            // with its final size, theme and material right away.
             let config = app
                 .config()
                 .app
@@ -88,29 +106,21 @@ pub fn run() {
                 .find(|w| w.label == "main")
                 .cloned()
                 .ok_or_else(|| error::msg("main window missing from tauri.conf.json"))?;
-            let mut builder = WebviewWindowBuilder::from_config(app.handle(), &config)?;
+            let config = window::prepare(app.handle(), config, &settings, hidden);
+            // Look hints for public/boot.js, so the first frame is already right.
+            let hints = serde_json::json!({
+                "os": std::env::consts::OS,
+                "translucent": window::translucent(&settings),
+                "theme": settings.theme,
+            });
+            let mut builder = WebviewWindowBuilder::from_config(app.handle(), &config)?
+                .initialization_script(format!("window.__BLENDSTACK__ = {hints};"));
             if paths.root.is_some() {
                 builder = builder.data_directory(paths.webview_dir());
             }
-            let main = builder.build()?;
-            if let Some(geometry) = settings.window {
-                window::restore_geometry(&main, geometry);
-            }
-
-            let state = AppState::new(
-                paths.clone(),
-                settings.clone(),
-                launched_hidden && settings.start_minimized,
-            )?;
-            state
-                .pending_files
-                .lock()
-                .unwrap()
-                .extend(blend_files(std::env::args()));
-            app.manage(state);
+            builder.build()?;
 
             std::thread::spawn(move || library::sweep(&library_dir));
-            window::apply_style(app.handle(), &settings);
             tray::create(app.handle())?;
             #[cfg(windows)]
             {

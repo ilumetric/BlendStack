@@ -8,6 +8,7 @@ import { TitleBar } from "./components/TitleBar";
 import { MenuHost } from "./components/Menu";
 import { DialogHost } from "./components/Dialogs";
 import { Toasts } from "./components/bits";
+import { TooltipHost } from "./components/Tooltip";
 import { LibraryView } from "./views/LibraryView";
 import { BuildsView } from "./views/BuildsView";
 import { NewsView } from "./views/NewsView";
@@ -125,6 +126,7 @@ export default function App() {
       <OpenWithSheet />
       <DialogHost />
       <MenuHost />
+      <TooltipHost />
       <Toasts />
       {dropping && installedCount > 0 && (
         <div className="dropzone">
