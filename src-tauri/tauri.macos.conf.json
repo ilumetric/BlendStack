@@ -18,8 +18,7 @@
         "dragDropEnabled": true,
         "create": false
       }
-    ],
-    "macOSPrivateApi": true
+    ]
   },
   "bundle": {
     "macOS": {
