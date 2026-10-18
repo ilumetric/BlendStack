@@ -58,7 +58,7 @@ pub async fn fetch_all(client: &reqwest::Client) -> Result<Vec<NewsItem>> {
             return Err(e);
         }
     }
-    items.sort_by(|a, b| b.date.cmp(&a.date));
+    items.sort_by_key(|i| std::cmp::Reverse(i.date));
     Ok(items)
 }
 

@@ -112,7 +112,7 @@ fn extract_zip(
         .map(|n| n.get())
         .unwrap_or(4)
         .clamp(1, 8);
-    files.sort_by(|a, b| b.2.cmp(&a.2));
+    files.sort_by_key(|f| std::cmp::Reverse(f.2));
     let mut buckets: Vec<Vec<(usize, PathBuf, u64)>> = vec![Vec::new(); workers];
     for (n, f) in files.into_iter().enumerate() {
         buckets[n % workers].push(f);
