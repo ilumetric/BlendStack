@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Blender bugs
+    url: https://projects.blender.org/blender/blender/issues
+    about: Problems inside Blender itself belong in Blender's own tracker.

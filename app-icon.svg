@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2f45"/>
+      <stop offset="1" stop-color="#121320"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc061"/>
+      <stop offset="1" stop-color="#f26b1d"/>
+    </linearGradient>
+    <linearGradient id="mid" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b38cff"/>
+      <stop offset="1" stop-color="#6b4ce6"/>
+    </linearGradient>
+    <linearGradient id="low" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5fb4ff"/>
+      <stop offset="1" stop-color="#2d6be0"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="208" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="896" rx="208" fill="url(#shine)"/>
+  <g stroke-linejoin="round" stroke-width="56">
+    <path d="M512 488 L772 620 L512 752 L252 620 Z" fill="url(#low)" stroke="url(#low)"/>
+    <path d="M512 388 L772 520 L512 652 L252 520 Z" fill="url(#mid)" stroke="url(#mid)" opacity="0.98"/>
+    <path d="M512 288 L772 420 L512 552 L252 420 Z" fill="url(#top)" stroke="url(#top)"/>
+  </g>
+  <path d="M512 316 L716 420 L512 524 L308 420 Z" fill="#ffffff" opacity="0.14"/>
+</svg>

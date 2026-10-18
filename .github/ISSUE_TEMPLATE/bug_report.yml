@@ -1,0 +1,42 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Blend Stack version
+      description: Settings → About
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Blender build involved (if any)
+      placeholder: "Blender 5.3 Beta, daily, v53 f75ffda"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log
+      description: Attach or paste the latest log file — see CONTRIBUTING.md for where it lives.
+      render: text
