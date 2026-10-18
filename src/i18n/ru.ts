@@ -6,9 +6,6 @@ export const ru: Record<MessageKey, string> = {
   "tab.news": "Новости",
   "tab.chat": "Чат",
 
-  "chat.title": "Blender Chat",
-  "chat.hint": "Войдите один раз — сессия сохраняется.",
-  "chat.openBrowser": "Открыть в браузере",
 
   "channel.stable": "Стабильные",
   "channel.daily": "Ежедневные",

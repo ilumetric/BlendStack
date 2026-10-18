@@ -174,7 +174,6 @@ pub fn run() {
             commands::take_pending_files,
             chat::chat_show,
             chat::chat_hide,
-            chat::chat_reload,
             updater::check_app_update,
             updater::install_app_update,
         ])
