@@ -21,6 +21,10 @@ pub struct Settings {
     /// Notify about every new daily build, not only new versions and updates of installed ones.
     pub notify_daily_all: bool,
     pub notify_experimental: bool,
+    /// Notify about unread Blender Chat messages.
+    pub notify_chat: bool,
+    /// The chat tab has been used, so the chat may run in the background.
+    pub chat_enabled: bool,
 
     pub launch_at_login: bool,
     pub start_minimized: bool,
@@ -58,6 +62,8 @@ impl Default for Settings {
             notify_daily: true,
             notify_daily_all: false,
             notify_experimental: false,
+            notify_chat: true,
+            chat_enabled: false,
             launch_at_login: false,
             start_minimized: true,
             close_to_tray: false,

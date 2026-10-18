@@ -112,6 +112,8 @@ export interface Settings {
   notifyDaily: boolean;
   notifyDailyAll: boolean;
   notifyExperimental: boolean;
+  notifyChat: boolean;
+  chatEnabled: boolean;
   launchAtLogin: boolean;
   startMinimized: boolean;
   closeToTray: boolean;

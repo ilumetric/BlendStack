@@ -54,6 +54,7 @@ interface Store {
   /** Value of `seen` before the current visit; newer items get a "New" badge. */
   prevSeen: Record<SeenKey, number>;
   focusBuild: string | null;
+  chatUnread: number;
 
   boot(): Promise<void>;
   setTab(tab: Tab): void;
@@ -135,6 +136,7 @@ export const useStore = create<Store>((set, get) => {
     seen: loadSeen(),
     prevSeen: loadSeen(),
     focusBuild: null,
+    chatUnread: 0,
 
     async boot() {
       // React StrictMode mounts twice in development; listeners must register once.
@@ -173,6 +175,8 @@ export const useStore = create<Store>((set, get) => {
         set((s) => ({ remote: { ...s.remote, [e.payload]: { ...s.remote[e.payload], list } } }));
       });
       void listen("files:opened", async () => get().queueFiles(await api.takePendingFiles()));
+      void listen<number>("chat:unread", (e) => set({ chatUnread: e.payload }));
+      void listen("chat:open", () => get().setTab("chat"));
 
       get().queueFiles(await api.takePendingFiles());
       void get().loadBuilds("stable");

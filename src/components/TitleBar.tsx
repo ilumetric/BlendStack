@@ -26,6 +26,7 @@ export function TitleBar() {
   const remote = useStore((s) => s.remote);
   const news = useStore((s) => s.news.list);
   const seen = useStore((s) => s.seen);
+  const chatUnread = useStore((s) => s.chatUnread);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
   const [panel, setPanel] = useState<Panel>(null);
   const [maximized, setMaximized] = useState(false);
@@ -72,7 +73,7 @@ export function TitleBar() {
             { value: "library", label: tr("tab.library") },
             { value: "builds", label: tr("tab.builds"), dot: buildsNew > 0 },
             { value: "news", label: tr("tab.news"), dot: newsNew },
-            { value: "chat", label: tr("tab.chat") },
+            { value: "chat", label: tr("tab.chat"), badge: tab === "chat" ? 0 : chatUnread },
           ]}
         />
       </div>

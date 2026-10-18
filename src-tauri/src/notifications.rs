@@ -83,7 +83,7 @@ impl Notifications {
                     lines.join("\n"),
                 )
             };
-            show_system(app, &title, &body);
+            show_system(app, &title, &body, Target::Builds);
         }
         let mut items = self.items.lock().unwrap();
         for n in new.into_iter().rev() {
@@ -111,13 +111,32 @@ impl Notifications {
     }
 }
 
+/// What a system notification is about, so a click can open the right tab.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Target {
+    Builds,
+    Chat,
+}
+
+static LAST_TARGET: Mutex<Target> = Mutex::new(Target::Builds);
+
+/// Called when the user clicks the notification.
+pub fn clicked(app: &AppHandle) {
+    crate::tray::show_main(app);
+    if *LAST_TARGET.lock().unwrap() == Target::Chat {
+        let _ = app.emit("chat:open", ());
+    }
+}
+
 #[cfg(windows)]
-fn show_system(_app: &AppHandle, title: &str, body: &str) {
+pub fn show_system(_app: &AppHandle, title: &str, body: &str, target: Target) {
+    *LAST_TARGET.lock().unwrap() = target;
     crate::toast::show(title, body);
 }
 
 #[cfg(not(windows))]
-fn show_system(app: &AppHandle, title: &str, body: &str) {
+pub fn show_system(app: &AppHandle, title: &str, body: &str, target: Target) {
+    *LAST_TARGET.lock().unwrap() = target;
     use tauri_plugin_notification::NotificationExt;
     if let Err(e) = app.notification().builder().title(title).body(body).show() {
         log::warn!("os notification failed: {e}");

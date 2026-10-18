@@ -160,6 +160,8 @@ export const en = {
   "settings.notifyDaily": "New daily versions and updates of installed builds",
   "settings.notifyDailyAll": "Every new daily build",
   "settings.notifyExperimental": "New experimental builds",
+  "settings.notifyChat": "New Blender Chat messages",
+  "settings.notifyChat.hint": "After signing in, the chat keeps running in the background.",
   "settings.showConsole": "Show the console window",
   "settings.globalArgs": "Arguments for every launch",
   "settings.globalArgs.placeholder": "e.g. --debug-gpu",

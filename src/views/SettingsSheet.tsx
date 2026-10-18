@@ -164,6 +164,9 @@ export function SettingsSheet() {
             <Row label={tr("settings.notifyDaily")}>{toggle("notifyDaily")}</Row>
             {settings.notifyDaily && <Row label={tr("settings.notifyDailyAll")}>{toggle("notifyDailyAll")}</Row>}
             <Row label={tr("settings.notifyExperimental")}>{toggle("notifyExperimental")}</Row>
+            <Row label={tr("settings.notifyChat")} hint={tr("settings.notifyChat.hint")}>
+              {toggle("notifyChat")}
+            </Row>
           </Group>
 
           <Group title={tr("settings.library")}>

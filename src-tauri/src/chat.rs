@@ -18,7 +18,9 @@
 //! synchronous command (which runs on the main thread) deadlocks.
 
 use crate::error::{msg, Result};
+use crate::notifications::{self, Target};
 use crate::state::AppState;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 use tauri::webview::{NewWindowResponse, WebviewBuilder};
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State, Url, WebviewUrl};
@@ -30,6 +32,21 @@ const HOMESERVER: &str = "https://matrix.blender.org";
 const LABEL: &str = "chat";
 /// How long to wait for the browser to come back with a login token.
 const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(15 * 60);
+/// Background start waits for the app to settle first.
+const BACKGROUND_DELAY: Duration = Duration::from_secs(4);
+
+/// The chat is on screen (its tab is open).
+static VISIBLE: AtomicBool = AtomicBool::new(false);
+static UNREAD: AtomicU32 = AtomicU32::new(0);
+
+/// The page's own web notifications are turned off: the app announces new
+/// messages itself, so they never come twice.
+const SILENCE_WEB_NOTIFICATIONS: &str = r#"(() => {
+  try {
+    Object.defineProperty(window.Notification, "permission", { get: () => "denied" });
+    window.Notification.requestPermission = () => Promise.resolve("denied");
+  } catch (_) {}
+})();"#;
 
 #[tauri::command]
 pub async fn chat_show(
@@ -42,19 +59,65 @@ pub async fn chat_show(
 ) -> Result<()> {
     let position = LogicalPosition::new(x, y);
     let size = LogicalSize::new(width.max(1.0), height.max(1.0));
+    VISIBLE.store(true, Ordering::Relaxed);
     if let Some(chat) = app.get_webview(LABEL) {
         chat.set_position(position)?;
         chat.set_size(size)?;
         chat.show()?;
         return Ok(());
     }
+    create(&app, &state, position, size)?;
+    if !state.settings().chat_enabled {
+        if let Ok(saved) = state.update_settings(|s| s.chat_enabled = true) {
+            crate::state::emit_settings_changed(&app, &saved);
+        }
+    }
+    Ok(())
+}
 
+/// After sign-in the chat keeps running hidden from startup, so unread
+/// messages are noticed without opening the tab.
+pub fn spawn_background(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(BACKGROUND_DELAY).await;
+        let state = app.state::<AppState>();
+        let settings = state.settings();
+        if !(settings.chat_enabled && settings.notify_chat) || app.get_webview(LABEL).is_some() {
+            return;
+        }
+        let created = create(
+            &app,
+            &state,
+            LogicalPosition::new(0.0, 0.0),
+            LogicalSize::new(1.0, 1.0),
+        );
+        match created {
+            Ok(()) if !VISIBLE.load(Ordering::Relaxed) => {
+                if let Some(chat) = app.get_webview(LABEL) {
+                    let _ = chat.hide();
+                }
+            }
+            Ok(()) => {}
+            Err(e) => log::warn!("could not start chat in the background: {e}"),
+        }
+    });
+}
+
+fn create(
+    app: &AppHandle,
+    state: &AppState,
+    position: LogicalPosition<f64>,
+    size: LogicalSize<f64>,
+) -> Result<()> {
     let window = app
         .get_window("main")
         .ok_or_else(|| msg("main window not found"))?;
     let opener = app.clone();
     let navigator = app.clone();
+    let watcher = app.clone();
     let mut builder = WebviewBuilder::new(LABEL, WebviewUrl::External(URL.parse().unwrap()))
+        // The app notifies about new messages itself (below).
+        .initialization_script(SILENCE_WEB_NOTIFICATIONS)
         // Links that would open a new window go to the default browser.
         .on_new_window(move |url, _features| {
             let _ = opener.opener().open_url(url.as_str(), None::<&str>);
@@ -72,7 +135,9 @@ pub async fn chat_show(
                 }
             });
             false
-        });
+        })
+        // The page title carries the unread count, e.g. "Blender Chat [3]".
+        .on_document_title_changed(move |_webview, title| on_title(&watcher, &title));
     if state.paths.root.is_some() {
         builder = builder.data_directory(state.paths.webview_dir());
     }
@@ -80,8 +145,48 @@ pub async fn chat_show(
     Ok(())
 }
 
+fn unread_from_title(title: &str) -> u32 {
+    title
+        .rsplit_once('[')
+        .and_then(|(_, rest)| rest.split_once(']'))
+        .and_then(|(n, _)| n.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+fn on_title(app: &AppHandle, title: &str) {
+    let unread = unread_from_title(title);
+    let previous = UNREAD.swap(unread, Ordering::Relaxed);
+    if unread == previous {
+        return;
+    }
+    let _ = app.emit("chat:unread", unread);
+    let state = app.state::<AppState>();
+    if unread <= previous || !state.settings().notify_chat {
+        return;
+    }
+    let watching = VISIBLE.load(Ordering::Relaxed)
+        && app
+            .get_webview_window("main")
+            .and_then(|w| w.is_focused().ok())
+            .unwrap_or(false);
+    if !watching {
+        let russian = state.settings().language.starts_with("ru")
+            || (state.settings().language.is_empty()
+                && sys_locale::get_locale().is_some_and(|l| l.starts_with("ru")));
+        let body = if russian {
+            format!("Непрочитанных сообщений: {unread}")
+        } else if unread == 1 {
+            "1 unread message".to_string()
+        } else {
+            format!("{unread} unread messages")
+        };
+        notifications::show_system(app, "Blender Chat", &body, Target::Chat);
+    }
+}
+
 #[tauri::command]
 pub async fn chat_hide(app: AppHandle) -> Result<()> {
+    VISIBLE.store(false, Ordering::Relaxed);
     if let Some(chat) = app.get_webview(LABEL) {
         chat.hide()?;
     }
@@ -134,8 +239,14 @@ async fn sign_in_in_browser(app: &AppHandle, sso: Url) -> Result<()> {
             target = serde_json::to_string(target.as_str())?,
         ))?;
     }
+    if let Ok(saved) = app
+        .state::<AppState>()
+        .update_settings(|s| s.chat_enabled = true)
+    {
+        crate::state::emit_settings_changed(app, &saved);
+    }
     crate::tray::show_main(app);
-    let _ = app.emit("chat:signed-in", ());
+    let _ = app.emit("chat:open", ());
     Ok(())
 }
 
@@ -188,3 +299,16 @@ const SIGNED_IN_PAGE: &str = r#"<!doctype html>
   <p>Return to Blend Stack — you can close this tab.</p>
   <p>Вход выполнен — вернитесь в Blend Stack, эту вкладку можно закрыть.</p>
 </main></body></html>"#;
+
+#[cfg(test)]
+mod tests {
+    use super::unread_from_title;
+
+    #[test]
+    fn reads_unread_count_from_title() {
+        assert_eq!(unread_from_title("Blender Chat"), 0);
+        assert_eq!(unread_from_title("Blender Chat [3]"), 3);
+        assert_eq!(unread_from_title("Blender Chat [12] | #general"), 12);
+        assert_eq!(unread_from_title("Blender Chat *"), 0);
+    }
+}

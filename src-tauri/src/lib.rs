@@ -126,9 +126,10 @@ pub fn run() {
             #[cfg(windows)]
             {
                 let handle = app.handle().clone();
-                toast::init(move || tray::show_main(&handle));
+                toast::init(move || notifications::clicked(&handle));
             }
             watcher::spawn(app.handle().clone());
+            chat::spawn_background(app.handle().clone());
             Ok(())
         })
         .on_window_event(|window, event| match event {

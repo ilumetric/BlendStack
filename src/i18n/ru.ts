@@ -162,6 +162,8 @@ export const ru: Record<MessageKey, string> = {
   "settings.notifyDaily": "Новые ежедневные версии и обновления установленных",
   "settings.notifyDailyAll": "Каждая новая ежедневная сборка",
   "settings.notifyExperimental": "Новые экспериментальные сборки",
+  "settings.notifyChat": "Новые сообщения в Blender Chat",
+  "settings.notifyChat.hint": "После входа чат работает в фоне.",
   "settings.showConsole": "Показывать окно консоли",
   "settings.globalArgs": "Аргументы для каждого запуска",
   "settings.globalArgs.placeholder": "например --debug-gpu",
