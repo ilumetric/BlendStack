@@ -23,7 +23,8 @@
         "transparent": true,
         "shadow": true,
         "visible": false,
-        "dragDropEnabled": true
+        "dragDropEnabled": true,
+        "create": false
       }
     ],
     "security": {
@@ -32,7 +33,12 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "app",
+      "dmg",
+      "appimage",
+      "deb"
+    ],
     "category": "GraphicsAndDesign",
     "shortDescription": "Launcher for official Blender builds",
     "longDescription": "Blend Stack downloads, organizes and launches official Blender releases, daily builds and experimental builds.",
@@ -44,11 +50,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "windows": {
-      "nsis": {
-        "installMode": "currentUser"
-      }
-    }
+    ]
   }
 }

@@ -42,6 +42,8 @@ pub struct Settings {
     pub build_args: HashMap<String, String>,
     pub last_launched: HashMap<String, i64>,
     pub external_builds: Vec<String>,
+    /// Last window position and size (physical pixels).
+    pub window: Option<WindowGeometry>,
 }
 
 impl Default for Settings {
@@ -71,6 +73,7 @@ impl Default for Settings {
             build_args: HashMap::new(),
             last_launched: HashMap::new(),
             external_builds: Vec::new(),
+            window: None,
         }
     }
 }
@@ -106,21 +109,78 @@ impl Settings {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowGeometry {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+    pub maximized: bool,
+}
+
+/// Where the app keeps its files.
+///
+/// When the folder of the executable is writable (Windows and plain Linux
+/// binaries), everything lives next to it: `data/` for settings, cache, logs and
+/// the WebView profile, `Builds/` for Blender. Nothing is written elsewhere, so
+/// the folder can be copied or moved as a whole. Otherwise (macOS app bundles,
+/// AppImages, read-only installs) the standard per-user folders are used.
 #[derive(Clone, Debug)]
 pub struct AppPaths {
+    /// The folder of the executable when running self-contained.
+    pub root: Option<PathBuf>,
     pub config_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub data_dir: PathBuf,
 }
 
 impl AppPaths {
+    pub fn resolve(identifier: &str) -> AppPaths {
+        if let Some(root) = self_contained_root() {
+            let data = root.join("data");
+            return AppPaths {
+                config_dir: data.clone(),
+                cache_dir: data.join("cache"),
+                data_dir: data,
+                root: Some(root),
+            };
+        }
+        let base = |dir: Option<PathBuf>| dir.unwrap_or_else(std::env::temp_dir).join(identifier);
+        AppPaths {
+            root: None,
+            config_dir: base(dirs::config_dir()),
+            cache_dir: base(dirs::cache_dir()),
+            data_dir: base(dirs::data_local_dir()),
+        }
+    }
+
+    pub fn create_dirs(&self) -> Result<()> {
+        for dir in [&self.config_dir, &self.cache_dir, &self.data_dir] {
+            std::fs::create_dir_all(dir)?;
+        }
+        Ok(())
+    }
+
     pub fn settings_file(&self) -> PathBuf {
         self.config_dir.join("settings.json")
     }
 
-    /// On Windows builds live in the user folder: some security policies stop
-    /// Blender's side-by-side runtime from loading anywhere under AppData.
+    pub fn log_dir(&self) -> PathBuf {
+        self.data_dir.join("logs")
+    }
+
+    /// WebView profile (local storage, caches) kept with the app data.
+    pub fn webview_dir(&self) -> PathBuf {
+        self.data_dir.join("webview")
+    }
+
     pub fn default_library(&self) -> PathBuf {
+        if let Some(root) = &self.root {
+            return root.join("Builds");
+        }
+        // Outside AppData: some security policies stop Blender's side-by-side
+        // runtime (blender.crt) from loading anywhere under it.
         if cfg!(windows) {
             if let Some(home) = dirs::home_dir() {
                 return home.join("BlendStack");
@@ -130,18 +190,56 @@ impl AppPaths {
     }
 
     pub fn library(&self, settings: &Settings) -> PathBuf {
-        match &settings.library_path {
-            Some(p) if !p.trim().is_empty() => PathBuf::from(p),
+        match settings.library_path.as_deref().map(str::trim) {
+            Some(p) if !p.is_empty() => {
+                let path = PathBuf::from(p);
+                match &self.root {
+                    Some(root) if path.is_relative() => root.join(path),
+                    _ => path,
+                }
+            }
             _ => self.default_library(),
         }
     }
+
+    /// The value to store for a chosen library folder: `None` for the default,
+    /// a relative path inside the app folder (so it survives moving the folder).
+    pub fn library_setting(&self, chosen: &Path) -> Option<String> {
+        if chosen == self.default_library() {
+            return None;
+        }
+        if let Some(rel) = self.root.as_ref().and_then(|r| chosen.strip_prefix(r).ok()) {
+            if !rel.as_os_str().is_empty() {
+                return Some(rel.to_string_lossy().into_owned());
+            }
+        }
+        Some(chosen.to_string_lossy().into_owned())
+    }
+}
+
+/// The executable's folder, if the app can keep its files there.
+fn self_contained_root() -> Option<PathBuf> {
+    if cfg!(target_os = "macos") || std::env::var_os("APPIMAGE").is_some() {
+        return None;
+    }
+    let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+    let data = dir.join("data");
+    std::fs::create_dir_all(&data).ok()?;
+    let probe = data.join(".write-test");
+    std::fs::write(&probe, b"").ok()?;
+    let _ = std::fs::remove_file(&probe);
+    Some(dir)
 }
 
 /// Reads JSON, falling back to the default value when the file is missing or corrupt.
 pub fn read_json<T: DeserializeOwned + Default>(path: &Path) -> T {
     std::fs::read(path)
         .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .and_then(|bytes| {
+            // Tolerate a UTF-8 BOM (files edited in Notepad and friends).
+            let bytes = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(&bytes);
+            serde_json::from_slice(bytes).ok()
+        })
         .unwrap_or_default()
 }
 

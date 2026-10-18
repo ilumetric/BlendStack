@@ -72,7 +72,7 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
             <span className={`tag tone-${tone(current)}`}>
               {current.channel === "stable" ? tr("channel.stable") : current.channel === "custom" ? tr("channel.custom") : cycleLabel(current.releaseCycle, tr)}
             </span>
-            {current.lts && <span className="tag tone-blue">{tr("badge.lts")}</span>}
+            {current.lts && <span className="tag tone-green">{tr("badge.lts")}</span>}
             {current.channel === "daily" && <span className="tag">{tr("channel.daily")}</span>}
           </div>
         </div>
@@ -139,7 +139,7 @@ function InstalledRow({ build, update }: { build: InstalledBuild; update: Remote
         <div className="row-title">
           <span className="name">{buildName(build, tr, settings?.labels)}</span>
           {favorite && <Star size={12} className="star" fill="currentColor" />}
-          {build.lts && <span className="tag tone-blue">{tr("badge.lts")}</span>}
+          {build.lts && <span className="tag tone-green">{tr("badge.lts")}</span>}
           {isDefault && <span className="tag">{tr("badge.default")}</span>}
         </div>
         <div className="row-sub">

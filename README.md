@@ -17,6 +17,16 @@
 
 ---
 
+## Install
+
+| Platform | Download | |
+| --- | --- | --- |
+| Windows 10/11 | `BlendStack-<version>-windows-x64.zip` | Unzip anywhere and run `Blend Stack.exe`. No installer, no registry. |
+| macOS | `BlendStack-<version>-macos-universal.dmg` | Apple silicon and Intel. The app is not notarized: right-click → Open the first time. |
+| Linux | `.AppImage` or `.deb` | |
+
+Get them from [Releases](https://github.com/ilumetric/BlendStack/releases). On Windows, Blend Stack updates itself from Settings → About.
+
 ## Features
 
 - **One-click installs** of any official Blender version — downloads are resumable, verified against the official SHA-256 checksums and unpacked in parallel.
@@ -32,6 +42,7 @@
 - **News** — the latest posts from blender.org and the Blender Developers Blog.
 - **System tray** quick-launch menu, start at login, close-to-tray.
 - **Native feel** — translucent Mica window on Windows 11 / vibrancy on macOS, light and dark themes, English and Russian UI.
+- **Self-contained on Windows** — one executable with everything built in; settings, cache, logs and Blender builds live in its folder.
 
 Blend Stack only ever downloads builds published by the Blender Foundation.
 
@@ -54,7 +65,7 @@ Prerequisites:
 ```bash
 npm install
 npm run app:dev      # run with hot reload
-npm run app:build    # produce installers in src-tauri/target/release/bundle
+npm run app:build    # release build: src-tauri/target/release (exe), bundle/ (dmg, AppImage, deb)
 ```
 
 Run the checks the CI runs:
@@ -82,14 +93,29 @@ src-tauri/src/        Rust backend
 
 ## Where things are stored
 
-| What | Windows | macOS | Linux |
-| --- | --- | --- | --- |
-| Builds (default) | `%USERPROFILE%\BlendStack` | `~/Library/Application Support/io.github.ilumetric.blendstack/Library` | `~/.local/share/io.github.ilumetric.blendstack/Library` |
-| Settings | `%APPDATA%\io.github.ilumetric.blendstack` | `~/Library/Application Support/io.github.ilumetric.blendstack` | `~/.config/io.github.ilumetric.blendstack` |
+When the app's folder is writable (the Windows zip, a plain Linux binary), everything stays in it:
 
-The library folder can be changed in Settings, and installed builds move along with it. It uses the same `stable` / `daily` / `experimental` layout as Blender Launcher, so an existing Blender Launcher library can be opened directly. Your Blender preferences and add-ons are untouched — every build uses Blender's normal configuration folder.
+```
+Blend Stack/
+├─ Blend Stack.exe
+├─ data/        settings, cache, logs, WebView profile
+└─ Builds/      stable/ daily/ experimental/
+```
 
-> On Windows the library deliberately lives outside `AppData`: some security policies stop Blender's bundled runtime (`blender.crt`) from loading there, which shows up as a "side-by-side configuration" error.
+Copy or move the folder and nothing is left behind. The only thing written elsewhere is the optional *Open at login* entry. On macOS (app bundle) and for AppImages the standard per-user folders are used (`~/Library/Application Support/io.github.ilumetric.blendstack`, `~/.local/share/io.github.ilumetric.blendstack`).
+
+The builds folder can be changed in Settings — installed builds move along with it. It uses the same `stable` / `daily` / `experimental` layout as Blender Launcher, so an existing Blender Launcher library can be opened directly. Your Blender preferences and add-ons are untouched: every build uses Blender's normal configuration folder.
+
+> On Windows avoid keeping builds under `AppData`: some security policies stop Blender's bundled runtime (`blender.crt`) from loading there, which shows up as a "side-by-side configuration" error.
+
+## Releasing
+
+Releases are built and published by GitHub Actions:
+
+1. **Actions → Release → Run workflow**, choose `patch`, `minor` or `major`.
+2. The workflow bumps the version everywhere (`scripts/version.mjs`), commits, tags `vX.Y.Z`, builds Windows, macOS and Linux in parallel and publishes the release with generated notes and `SHA256SUMS.txt`.
+
+Pushing a `vX.Y.Z` tag yourself works too, as long as the files carry that version (`npm run release:version -- X.Y.Z`). Every push to `main` also leaves a ready-to-run Windows build under the CI run's artifacts.
 
 ## Contributing
 
@@ -99,4 +125,4 @@ Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [MIT](LICENSE) © Max Derksen
 
-Blend Stack is an independent project and is not affiliated with or endorsed by the Blender Foundation. Blender is a registered trademark of the Blender Foundation.
+Blend Stack is an independent project and is not affiliated with or endorsed by the Blender Foundation. Blender and the Blender logo are trademarks of the Blender Foundation; the logo is used to mark Blender builds.

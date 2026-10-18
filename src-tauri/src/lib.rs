@@ -10,17 +10,22 @@ mod recent;
 mod settings;
 mod sources;
 mod state;
+#[cfg(windows)]
+mod toast;
 mod tray;
+mod updater;
 mod watcher;
 mod window;
 
 use settings::{read_json, AppPaths, Settings};
 use state::AppState;
-use tauri::{Emitter, Manager, WindowEvent};
+use tauri::{Emitter, Manager, RunEvent, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
-use tauri_plugin_window_state::StateFlags;
+use tauri_plugin_log::{Target, TargetKind};
 
 const HIDDEN_FLAG: &str = "--minimized";
+/// Must match `identifier` in tauri.conf.json.
+const IDENTIFIER: &str = "io.github.ilumetric.blendstack";
 
 /// `.blend` files among command-line arguments (file association / "Open with").
 fn blend_files<I: IntoIterator<Item = String>>(args: I) -> Vec<String> {
@@ -32,8 +37,15 @@ fn blend_files<I: IntoIterator<Item = String>>(args: I) -> Vec<String> {
 
 pub fn run() {
     let launched_hidden = std::env::args().any(|a| a == HIDDEN_FLAG);
+    // Resolved before anything starts so logs and the WebView profile land
+    // in the app's own folder too.
+    let paths = AppPaths::resolve(IDENTIFIER);
+    if let Err(e) = paths.create_dirs() {
+        eprintln!("cannot create data folders: {e}");
+    }
+    updater::cleanup_previous();
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             let files = blend_files(argv);
             if !files.is_empty() {
@@ -45,15 +57,14 @@ pub fn run() {
         }))
         .plugin(
             tauri_plugin_log::Builder::new()
+                .clear_targets()
+                .target(Target::new(TargetKind::Folder {
+                    path: paths.log_dir(),
+                    file_name: Some("blendstack".into()),
+                }))
+                .target(Target::new(TargetKind::Stdout))
                 .level(log::LevelFilter::Info)
                 .max_file_size(2_000_000)
-                .build(),
-        )
-        .plugin(
-            tauri_plugin_window_state::Builder::new()
-                .with_state_flags(
-                    StateFlags::all() & !StateFlags::VISIBLE & !StateFlags::DECORATIONS,
-                )
                 .build(),
         )
         .plugin(tauri_plugin_notification::init())
@@ -64,19 +75,30 @@ pub fn run() {
             Some(vec![HIDDEN_FLAG]),
         ))
         .setup(move |app| {
-            let resolver = app.path();
-            let paths = AppPaths {
-                config_dir: resolver.app_config_dir()?,
-                cache_dir: resolver.app_cache_dir()?,
-                data_dir: resolver.app_local_data_dir()?,
-            };
-            for dir in [&paths.config_dir, &paths.cache_dir, &paths.data_dir] {
-                std::fs::create_dir_all(dir)?;
-            }
             let settings: Settings = read_json(&paths.settings_file());
             let library_dir = paths.library(&settings);
+
+            // The window is created here rather than from the config so its
+            // WebView profile can live next to the app data.
+            let config = app
+                .config()
+                .app
+                .windows
+                .iter()
+                .find(|w| w.label == "main")
+                .cloned()
+                .ok_or_else(|| error::msg("main window missing from tauri.conf.json"))?;
+            let mut builder = WebviewWindowBuilder::from_config(app.handle(), &config)?;
+            if paths.root.is_some() {
+                builder = builder.data_directory(paths.webview_dir());
+            }
+            let main = builder.build()?;
+            if let Some(geometry) = settings.window {
+                window::restore_geometry(&main, geometry);
+            }
+
             let state = AppState::new(
-                paths,
+                paths.clone(),
                 settings.clone(),
                 launched_hidden && settings.start_minimized,
             )?;
@@ -90,17 +112,27 @@ pub fn run() {
             std::thread::spawn(move || library::sweep(&library_dir));
             window::apply_style(app.handle(), &settings);
             tray::create(app.handle())?;
+            #[cfg(windows)]
+            {
+                let handle = app.handle().clone();
+                toast::init(move || tray::show_main(&handle));
+            }
             watcher::spawn(app.handle().clone());
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
+                window::save_geometry(window.app_handle());
                 let state = window.state::<AppState>();
                 if state.settings().close_to_tray {
                     api.prevent_close();
                     let _ = window.hide();
                 }
             }
+            WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
+                window::remember_geometry(window.app_handle());
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_bootstrap,
@@ -129,8 +161,17 @@ pub fn run() {
             commands::clear_notifications,
             commands::check_now,
             commands::take_pending_files,
-            commands::check_app_update,
+            updater::check_app_update,
+            updater::install_app_update,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Blend Stack");
+        .build(tauri::generate_context!())
+        .expect("error while starting Blend Stack");
+
+    app.run(|handle, event| {
+        if let RunEvent::ExitRequested { .. } = event {
+            window::save_geometry(handle);
+            #[cfg(windows)]
+            toast::clear();
+        }
+    });
 }

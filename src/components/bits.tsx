@@ -2,6 +2,7 @@ import { CheckCircle2, Info, XCircle } from "lucide-react";
 import { useStore } from "../store";
 import { series, tone } from "../lib/builds";
 import type { Channel } from "../lib/types";
+import { BlenderMark } from "./BlenderMark";
 
 export function Glyph({
   build,
@@ -12,7 +13,8 @@ export function Glyph({
 }) {
   return (
     <div className={`glyph tone-${tone(build)}${size ? ` ${size}` : ""}`} aria-hidden>
-      {build.version ? series(build.version) : "?"}
+      <BlenderMark className="glyph-mark" />
+      <span>{build.version ? series(build.version) : "?"}</span>
     </div>
   );
 }

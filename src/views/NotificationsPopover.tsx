@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUpCircle, BellOff, Package, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowUpCircle, BellOff, Download, Package, RefreshCw, Sparkles } from "lucide-react";
 import { useStore } from "../store";
 import { useT } from "../i18n";
 import { api, errorText } from "../lib/api";
@@ -10,11 +10,13 @@ import type { AppNotification, RemoteChannel } from "../lib/types";
 function icon(n: AppNotification) {
   switch (n.kind) {
     case "release":
-      return { tone: "green", el: <Sparkles size={16} /> };
+      return { tone: "orange", el: <Sparkles size={16} /> };
+    case "app":
+      return { tone: "gray", el: <Download size={16} /> };
     case "update":
       return { tone: "blue", el: <ArrowUpCircle size={16} /> };
     default:
-      return { tone: n.channel === "experimental" ? "pink" : "orange", el: <Package size={16} /> };
+      return { tone: n.channel === "experimental" ? "pink" : "purple", el: <Package size={16} /> };
   }
 }
 
@@ -68,7 +70,7 @@ export function NotificationsPopover({ anchor, onClose }: { anchor: HTMLElement 
         )}
         {items.map((n) => {
           const ic = icon(n);
-          const clickable = n.channel && n.channel !== "custom";
+          const clickable = n.kind === "app" || (n.channel && n.channel !== "custom");
           return (
             <button
               key={n.id}
@@ -76,7 +78,8 @@ export function NotificationsPopover({ anchor, onClose }: { anchor: HTMLElement 
               style={{ width: "100%", textAlign: "left", paddingLeft: 14 }}
               onClick={() => {
                 if (!clickable) return;
-                showBuild(n.channel as RemoteChannel, n.buildId);
+                if (n.kind === "app") useStore.getState().setSettingsOpen(true);
+                else showBuild(n.channel as RemoteChannel, n.buildId);
                 onClose();
               }}
             >

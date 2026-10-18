@@ -49,6 +49,7 @@ export const api = {
   checkNow: () => invoke<AppNotification[]>("check_now"),
   takePendingFiles: () => invoke<string[]>("take_pending_files"),
   checkAppUpdate: () => invoke<AppUpdate | null>("check_app_update"),
+  installAppUpdate: () => invoke<void>("install_app_update"),
 };
 
 export function errorText(e: unknown): string {

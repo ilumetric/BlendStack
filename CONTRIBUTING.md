@@ -27,10 +27,10 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## Reporting bugs
 
-Please include your OS, Blend Stack version (Settings → About) and the log file:
+Please include your OS, Blend Stack version (Settings → About) and the latest log file:
 
-| OS | Log folder |
+| Build | Log folder |
 | --- | --- |
-| Windows | `%LOCALAPPDATA%\io.github.ilumetric.blendstack\logs` |
-| macOS | `~/Library/Logs/io.github.ilumetric.blendstack` |
-| Linux | `~/.local/share/io.github.ilumetric.blendstack/logs` |
+| Windows zip / Linux binary | `data/logs` next to the executable (Settings → Library → App data) |
+| macOS | `~/Library/Application Support/io.github.ilumetric.blendstack/logs` |
+| AppImage | `~/.local/share/io.github.ilumetric.blendstack/logs` |

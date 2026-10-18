@@ -55,3 +55,33 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - name: Test
         run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  # Every push to main produces a ready-to-run Windows build
+  # (Actions → the run → Artifacts) for testing before a release.
+  snapshot:
+    name: Windows snapshot
+    if: github.event_name == 'push'
+    needs: frontend
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Build
+        shell: pwsh
+        run: |
+          npx tauri build --no-bundle
+          New-Item -ItemType Directory -Force "out/Blend Stack" | Out-Null
+          Copy-Item src-tauri/target/release/blendstack.exe "out/Blend Stack/Blend Stack.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlendStack-windows-x64-${{ github.sha }}
+          path: out
+          retention-days: 14

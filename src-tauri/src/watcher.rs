@@ -17,7 +17,13 @@ const FIRST_CHECK_DELAY: Duration = Duration::from_secs(6);
 struct Seen {
     channels: HashMap<String, Vec<String>>,
     last_check: i64,
+    /// Last time GitHub was asked for a newer Blend Stack.
+    app_checked: i64,
+    /// Blend Stack version the user was already told about.
+    app_notified: String,
 }
+
+const APP_CHECK_EVERY: i64 = 12 * 3600;
 
 pub fn spawn(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
@@ -90,7 +96,22 @@ pub async fn check(app: &AppHandle) -> Vec<AppNotification> {
         seen.channels.insert(name, merged);
     }
 
-    seen.last_check = crate::model::now();
+    let now = crate::model::now();
+    if now - seen.app_checked > APP_CHECK_EVERY {
+        seen.app_checked = now;
+        if let Ok(Some(update)) = crate::updater::available(&state).await {
+            if seen.app_notified != update.version {
+                seen.app_notified = update.version.clone();
+                fresh.push(AppNotification::new(
+                    "app",
+                    format!("Blend Stack {} is available", update.version),
+                    "Open Settings → About to update".into(),
+                ));
+            }
+        }
+    }
+
+    seen.last_check = now;
     let _ = write_json(&seen_file, &seen);
     state.notifications.push(app, fresh.clone(), true);
     fresh

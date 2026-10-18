@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
-use tauri_plugin_notification::NotificationExt;
 
 const MAX_STORED: usize = 100;
 
@@ -84,9 +83,7 @@ impl Notifications {
                     lines.join("\n"),
                 )
             };
-            if let Err(e) = app.notification().builder().title(title).body(body).show() {
-                log::warn!("os notification failed: {e}");
-            }
+            show_system(app, &title, &body);
         }
         let mut items = self.items.lock().unwrap();
         for n in new.into_iter().rev() {
@@ -98,6 +95,8 @@ impl Notifications {
     }
 
     pub fn mark_all_read(&self, app: &AppHandle) {
+        #[cfg(windows)]
+        crate::toast::clear();
         let mut items = self.items.lock().unwrap();
         items.iter_mut().for_each(|n| n.read = true);
         self.save(&items);
@@ -109,5 +108,18 @@ impl Notifications {
         items.clear();
         self.save(&items);
         let _ = app.emit("notifications:changed", ());
+    }
+}
+
+#[cfg(windows)]
+fn show_system(_app: &AppHandle, title: &str, body: &str) {
+    crate::toast::show(title, body);
+}
+
+#[cfg(not(windows))]
+fn show_system(app: &AppHandle, title: &str, body: &str) {
+    use tauri_plugin_notification::NotificationExt;
+    if let Err(e) = app.notification().builder().title(title).body(body).show() {
+        log::warn!("os notification failed: {e}");
     }
 }

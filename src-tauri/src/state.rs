@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::library;
 use crate::model::InstalledBuild;
 use crate::notifications::Notifications;
-use crate::settings::{write_json, AppPaths, Settings};
+use crate::settings::{write_json, AppPaths, Settings, WindowGeometry};
 use crate::sources::RemoteCache;
 use std::path::PathBuf;
 use std::sync::{Mutex, RwLock};
@@ -21,6 +21,8 @@ pub struct AppState {
     /// `.blend` files passed on the command line, waiting for the UI to pick them up.
     pub pending_files: Mutex<Vec<String>>,
     pub started_hidden: bool,
+    /// Latest window geometry, written to settings on close.
+    pub geometry: Mutex<Option<WindowGeometry>>,
 }
 
 impl AppState {
@@ -34,6 +36,7 @@ impl AppState {
             .connect_timeout(std::time::Duration::from_secs(15))
             .read_timeout(std::time::Duration::from_secs(60))
             .build()?;
+        let geometry = settings.window;
         Ok(AppState {
             cache: RemoteCache::new(paths.cache_dir.clone()),
             notifications: Notifications::load(paths.data_dir.join("notifications.json")),
@@ -43,6 +46,7 @@ impl AppState {
             downloads: Downloads::default(),
             watcher_wake: tokio::sync::Notify::new(),
             pending_files: Mutex::new(Vec::new()),
+            geometry: Mutex::new(geometry),
             started_hidden,
         })
     }

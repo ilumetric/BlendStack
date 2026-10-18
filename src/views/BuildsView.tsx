@@ -35,7 +35,7 @@ function groupBuilds(channel: RemoteChannel, builds: RemoteBuild[], tr: Translat
       .map(([s, list]) => ({
         key: s,
         title: tr("builds.series", { series: s }),
-        tags: list[0].lts ? [{ text: tr("badge.lts"), tone: "blue" }] : [],
+        tags: list[0].lts ? [{ text: tr("badge.lts"), tone: "green" }] : [],
         link: { label: tr("menu.releaseNotes"), url: releaseNotesUrl(list[0].version) },
         builds: list.sort((a, b) => compareVersions(b.version, a.version)),
         collapsible: true,
@@ -99,7 +99,7 @@ function RemoteRow({ build, isNew, focused }: { build: RemoteBuild; isNew: boole
           {build.channel === "experimental" && (
             <span className={`tag tone-${tone(build)}`}>{cycleLabel(build.releaseCycle, tr, true)}</span>
           )}
-          {build.lts && build.channel !== "stable" && <span className="tag tone-blue">{tr("badge.lts")}</span>}
+          {build.lts && build.channel !== "stable" && <span className="tag tone-green">{tr("badge.lts")}</span>}
         </div>
         <div className="row-sub">
           {meta.map((m, i) => (

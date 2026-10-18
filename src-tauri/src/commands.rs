@@ -3,7 +3,7 @@
 use crate::download::{self, DownloadTask};
 use crate::error::{msg, Result};
 use crate::library;
-use crate::model::{now, Channel, InstalledBuild, RemoteBuild, Version};
+use crate::model::{now, Channel, InstalledBuild, RemoteBuild};
 use crate::notifications::AppNotification;
 use crate::recent::{self, RecentFile};
 use crate::settings::Settings;
@@ -16,8 +16,6 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_opener::OpenerExt;
 
-const REPO: &str = "ilumetric/BlendStack";
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemInfo {
@@ -28,6 +26,9 @@ pub struct SystemInfo {
     pub default_library: String,
     pub library: String,
     pub repository: String,
+    /// Settings, cache and logs live next to the executable.
+    pub self_contained: bool,
+    pub data_dir: String,
 }
 
 #[derive(Serialize)]
@@ -53,7 +54,9 @@ fn system_info(app: &AppHandle, state: &AppState) -> SystemInfo {
             .library(&settings)
             .to_string_lossy()
             .into_owned(),
-        repository: format!("https://github.com/{REPO}"),
+        repository: format!("https://github.com/{}", crate::updater::REPO),
+        self_contained: state.paths.root.is_some(),
+        data_dir: state.paths.data_dir.to_string_lossy().into_owned(),
     }
 }
 
@@ -95,7 +98,16 @@ pub fn update_settings(
             target.insert(k.clone(), v.clone());
         }
     }
-    let next: Settings = serde_json::from_value(merged)?;
+    let mut next: Settings = serde_json::from_value(merged)?;
+    // Folders inside the app folder are stored relative to it.
+    if next
+        .library_path
+        .as_deref()
+        .is_some_and(|p| !p.trim().is_empty())
+    {
+        let resolved = state.paths.library(&next);
+        next.library_path = state.paths.library_setting(&resolved);
+    }
     let saved = state.update_settings(|s| *s = next)?;
 
     if before.launch_at_login != saved.launch_at_login {
@@ -262,7 +274,8 @@ pub async fn move_library(
             .map_err(|e| msg(e.to_string()))??
     };
     // Settings keep build ids (`<channel>/<folder>`), which do not change when moving.
-    let saved = state.update_settings(|s| s.library_path = target.clone())?;
+    let setting = state.paths.library_setting(&to);
+    let saved = state.update_settings(|s| s.library_path = setting)?;
     emit_settings_changed(&app, &saved);
     emit_library_changed(&app);
     Ok(moved)
@@ -365,54 +378,4 @@ pub async fn check_now(app: AppHandle) -> Vec<AppNotification> {
 #[tauri::command]
 pub fn take_pending_files(state: State<'_, AppState>) -> Vec<String> {
     std::mem::take(&mut *state.pending_files.lock().unwrap())
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AppUpdate {
-    pub version: String,
-    pub url: String,
-    pub notes: String,
-}
-
-/// Looks for a newer Blend Stack release on GitHub.
-#[tauri::command]
-pub async fn check_app_update(state: State<'_, AppState>) -> Result<Option<AppUpdate>> {
-    #[derive(serde::Deserialize)]
-    struct Release {
-        tag_name: String,
-        html_url: String,
-        #[serde(default)]
-        body: Option<String>,
-        #[serde(default)]
-        draft: bool,
-        #[serde(default)]
-        prerelease: bool,
-    }
-    let resp = state
-        .http
-        .get(format!(
-            "https://api.github.com/repos/{REPO}/releases/latest"
-        ))
-        .header("Accept", "application/vnd.github+json")
-        .timeout(std::time::Duration::from_secs(15))
-        .send()
-        .await?;
-    if resp.status() == reqwest::StatusCode::NOT_FOUND {
-        return Ok(None);
-    }
-    let release: Release = resp.error_for_status()?.json().await?;
-    if release.draft || release.prerelease {
-        return Ok(None);
-    }
-    let latest = release.tag_name.trim_start_matches('v');
-    if Version::parse(latest) > Version::parse(env!("CARGO_PKG_VERSION")) {
-        Ok(Some(AppUpdate {
-            version: latest.to_string(),
-            url: release.html_url,
-            notes: release.body.unwrap_or_default(),
-        }))
-    } else {
-        Ok(None)
-    }
 }

@@ -137,6 +137,9 @@ export interface SystemInfo {
   defaultLibrary: string;
   library: string;
   repository: string;
+  /** Settings, cache and logs live next to the executable. */
+  selfContained: boolean;
+  dataDir: string;
 }
 
 export interface Bootstrap {
@@ -151,4 +154,7 @@ export interface AppUpdate {
   version: string;
   url: string;
   notes: string;
+  /** Can be installed from inside the app (self-contained Windows build). */
+  canInstall: boolean;
+  size: number;
 }

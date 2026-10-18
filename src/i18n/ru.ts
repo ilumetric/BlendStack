@@ -144,6 +144,8 @@ export const ru: Record<MessageKey, string> = {
   "settings.move.body": "Установленных сборок: {count}. Их можно перенести в новую папку — иначе они останутся на месте и пропадут из списка.",
   "settings.move.confirm": "Перенести",
   "settings.move.skip": "Не переносить",
+  "settings.dataFolder": "Данные приложения",
+  "settings.dataFolder.selfContained": "Настройки, кэш и логи хранятся рядом с программой — папку можно переносить и копировать целиком.",
   "settings.keepArchives": "Сохранять скачанные архивы",
   "settings.replaceOnUpdate": "Удалять старую сборку после обновления",
   "settings.showLegacy": "Показывать релизы старше 2.80",
@@ -166,6 +168,8 @@ export const ru: Record<MessageKey, string> = {
   "settings.upToDate": "Установлена последняя версия Blend Stack.",
   "settings.updateAvailable": "Доступна версия {version}.",
   "settings.download": "Скачать",
+  "settings.installUpdate": "Установить и перезапустить",
+  "settings.installing": "Обновление…",
   "settings.source": "Исходный код",
   "settings.disclaimer": "Blend Stack — независимый проект с открытым исходным кодом, не связанный с Blender Foundation. Blender — зарегистрированная торговая марка Blender Foundation.",
 

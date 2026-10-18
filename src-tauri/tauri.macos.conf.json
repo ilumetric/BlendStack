@@ -15,9 +15,15 @@
         "hiddenTitle": true,
         "transparent": true,
         "visible": false,
-        "dragDropEnabled": true
+        "dragDropEnabled": true,
+        "create": false
       }
     ],
     "macOSPrivateApi": true
+  },
+  "bundle": {
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

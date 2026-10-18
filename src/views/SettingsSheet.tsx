@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, X } from "lucide-react";
 import { useStore } from "../store";
@@ -41,6 +42,12 @@ export function SettingsSheet() {
   const close = () => useStore.getState().setSettingsOpen(false);
   const [update, setUpdate] = useState<AppUpdate | null | "checking" | "none">(null);
   const [args, setArgs] = useState(settings?.globalArgs ?? "");
+  const [installing, setInstalling] = useState<number | null>(null);
+
+  useEffect(() => {
+    const un = listen<number>("app-update:progress", (e) => setInstalling(e.payload));
+    return () => void un.then((f) => f());
+  }, []);
 
   if (!settings || !system) return null;
 
@@ -76,6 +83,16 @@ export function SettingsSheet() {
   const chooseLibrary = async () => {
     const dir = await open({ directory: true, defaultPath: system.library });
     if (typeof dir === "string" && dir !== system.library) await switchLibrary(dir);
+  };
+
+  const installUpdate = async () => {
+    setInstalling(0);
+    try {
+      await api.installAppUpdate();
+    } catch (e) {
+      setInstalling(null);
+      useStore.getState().toast(errorText(e), "error");
+    }
   };
 
   const checkUpdate = async () => {
@@ -178,6 +195,21 @@ export function SettingsSheet() {
                 {tr("common.change")}
               </button>
             </Row>
+            <Row
+              label={tr("settings.dataFolder")}
+              hint={
+                <>
+                  <span className="path" title={system.dataDir}>
+                    {system.dataDir}
+                  </span>
+                  {system.selfContained && tr("settings.dataFolder.selfContained")}
+                </>
+              }
+            >
+              <button className="icon-btn" title={revealLabel(tr)} onClick={() => api.reveal(system.dataDir).catch(() => {})}>
+                <FolderOpen size={16} />
+              </button>
+            </Row>
             <Row label={tr("settings.replaceOnUpdate")}>{toggle("replaceOnUpdate")}</Row>
             <Row label={tr("settings.keepArchives")}>{toggle("keepArchives")}</Row>
             <Row label={tr("settings.showLegacy")}>
@@ -221,9 +253,17 @@ export function SettingsSheet() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
                 {update && typeof update === "object" ? (
-                  <button className="btn primary" onClick={() => api.openUrl(update.url)}>
-                    {tr("settings.download")}
-                  </button>
+                  update.canInstall ? (
+                    <button className="btn primary" onClick={installUpdate} disabled={installing !== null}>
+                      {installing === null
+                        ? tr("settings.installUpdate")
+                        : `${tr("settings.installing")} ${Math.round(installing * 100)}%`}
+                    </button>
+                  ) : (
+                    <button className="btn primary" onClick={() => api.openUrl(update.url)}>
+                      {tr("settings.download")}
+                    </button>
+                  )
                 ) : (
                   <button className="btn" onClick={checkUpdate} disabled={update === "checking"}>
                     {tr("settings.checkUpdate")}

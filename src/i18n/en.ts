@@ -142,6 +142,8 @@ export const en = {
   "settings.move.body": "{count} installed builds can be moved to the new folder. Otherwise they stay where they are and won’t be listed.",
   "settings.move.confirm": "Move Builds",
   "settings.move.skip": "Don’t Move",
+  "settings.dataFolder": "App data",
+  "settings.dataFolder.selfContained": "Settings, cache and logs are kept next to the app, so the folder can be moved or copied as a whole.",
   "settings.keepArchives": "Keep downloaded archives",
   "settings.replaceOnUpdate": "Remove the old build after updating",
   "settings.showLegacy": "Show releases older than 2.80",
@@ -164,6 +166,8 @@ export const en = {
   "settings.upToDate": "Blend Stack is up to date.",
   "settings.updateAvailable": "Version {version} is available.",
   "settings.download": "Download",
+  "settings.installUpdate": "Install and Restart",
+  "settings.installing": "Updating…",
   "settings.source": "Source Code",
   "settings.disclaimer": "Blend Stack is an independent open-source project and is not affiliated with the Blender Foundation. Blender is a registered trademark of the Blender Foundation.",
 

@@ -34,13 +34,13 @@ export function tone(b: AnyBuild): string {
   if (b.channel === "experimental") return "pink";
   switch (normalizeCycle(b.releaseCycle)) {
     case "alpha":
-      return "orange";
-    case "beta":
       return "purple";
+    case "beta":
+      return "blue";
     case "candidate":
-      return "indigo";
+      return "red";
     default:
-      return b.channel === "custom" ? "gray" : "green";
+      return b.channel === "custom" ? "gray" : "orange";
   }
 }
 

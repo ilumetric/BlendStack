@@ -13,7 +13,8 @@
         "decorations": false,
         "transparent": false,
         "visible": false,
-        "dragDropEnabled": true
+        "dragDropEnabled": true,
+        "create": false
       }
     ]
   }
