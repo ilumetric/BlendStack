@@ -120,7 +120,9 @@ pub enum Target {
 
 static LAST_TARGET: Mutex<Target> = Mutex::new(Target::Builds);
 
-/// Called when the user clicks the notification.
+/// Called when the user clicks the notification. Only the Windows notifier
+/// reports clicks; the desktop notification plugin elsewhere does not.
+#[cfg(windows)]
 pub fn clicked(app: &AppHandle) {
     crate::tray::show_main(app);
     if *LAST_TARGET.lock().unwrap() == Target::Chat {
