@@ -72,6 +72,7 @@ export function TitleBar() {
             { value: "library", label: tr("tab.library") },
             { value: "builds", label: tr("tab.builds"), dot: buildsNew > 0 },
             { value: "news", label: tr("tab.news"), dot: newsNew },
+            { value: "chat", label: tr("tab.chat") },
           ]}
         />
       </div>

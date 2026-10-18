@@ -16,7 +16,7 @@ import type {
   SystemInfo,
 } from "./lib/types";
 
-export type Tab = "library" | "builds" | "news";
+export type Tab = "library" | "builds" | "news" | "chat";
 export type ToastTone = "info" | "success" | "error";
 
 export interface Toast {

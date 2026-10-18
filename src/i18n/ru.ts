@@ -4,6 +4,11 @@ export const ru: Record<MessageKey, string> = {
   "tab.library": "Библиотека",
   "tab.builds": "Сборки",
   "tab.news": "Новости",
+  "tab.chat": "Чат",
+
+  "chat.title": "Blender Chat",
+  "chat.hint": "Войдите один раз — сессия сохраняется.",
+  "chat.openBrowser": "Открыть в браузере",
 
   "channel.stable": "Стабильные",
   "channel.daily": "Ежедневные",

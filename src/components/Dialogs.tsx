@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { create } from "zustand";
 import { AlertTriangle } from "lucide-react";
 import { t } from "../i18n";
+import { useOverlay } from "../lib/overlay";
 
 interface ConfirmOptions {
   title: string;
@@ -38,6 +39,7 @@ function close() {
 }
 
 export function Backdrop({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  useOverlay();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

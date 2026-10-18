@@ -227,11 +227,7 @@ export function BuildsView() {
           ]}
         />
         <div className="toolbar-status">
-          {loading ? (
-            <Loader2 size={13} className="spin" />
-          ) : list?.fetchedAt ? (
-            tr("builds.updated", { time: relativeTime(list.fetchedAt, lang) })
-          ) : null}
+          {!loading && list?.fetchedAt ? tr("builds.updated", { time: relativeTime(list.fetchedAt, lang) }) : null}
         </div>
         <div className="search">
           <Search size={13} />

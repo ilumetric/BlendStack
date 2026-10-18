@@ -1,3 +1,4 @@
+mod chat;
 mod commands;
 mod download;
 mod error;
@@ -171,6 +172,9 @@ pub fn run() {
             commands::clear_notifications,
             commands::check_now,
             commands::take_pending_files,
+            chat::chat_show,
+            chat::chat_hide,
+            chat::chat_reload,
             updater::check_app_update,
             updater::install_app_update,
         ])

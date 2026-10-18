@@ -2,6 +2,11 @@ export const en = {
   "tab.library": "Library",
   "tab.builds": "Builds",
   "tab.news": "News",
+  "tab.chat": "Chat",
+
+  "chat.title": "Blender Chat",
+  "chat.hint": "Sign in once — the session is remembered.",
+  "chat.openBrowser": "Open in Browser",
 
   "channel.stable": "Stable",
   "channel.daily": "Daily",

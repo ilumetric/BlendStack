@@ -82,7 +82,7 @@ export function NewsView() {
           ]}
         />
         <div className="toolbar-status" style={{ marginLeft: "auto" }}>
-          {loading ? <Loader2 size={13} className="spin" /> : list?.fetchedAt ? tr("builds.updated", { time: relativeTime(list.fetchedAt, lang) }) : null}
+          {!loading && list?.fetchedAt ? tr("builds.updated", { time: relativeTime(list.fetchedAt, lang) }) : null}
         </div>
         <button className="icon-btn" title={`${tr("common.refresh")} (Ctrl+R)`} onClick={() => loadNews(true)}>
           <RefreshCw size={16} className={loading ? "spin" : undefined} />

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { create } from "zustand";
+import { useOverlay } from "../lib/overlay";
 
 export type MenuEntry =
   | {
@@ -42,6 +43,7 @@ export function openMenuAt(el: HTMLElement, items: MenuEntry[], alignRight = fal
 export function MenuHost() {
   const open = useMenu((s) => s.open);
   const close = useMenu((s) => s.close);
+  useOverlay(!!open);
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 

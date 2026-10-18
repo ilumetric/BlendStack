@@ -1436,6 +1436,33 @@ html:not(.translucent) .card {
   font-size: 13px;
 }
 
+/* ───────────────────────── Chat ───────────────────────── */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat .toolbar {
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.chat-title {
+  font-weight: 650;
+}
+
+/* The native chat WebView is positioned over this box. */
+.chat-host {
+  flex: 1;
+  min-height: 0;
+  margin: 0 12px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+
 /* ───────────────────────── Overlays ───────────────────────── */
 
 .popover {

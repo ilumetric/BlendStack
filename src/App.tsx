@@ -12,6 +12,8 @@ import { TooltipHost } from "./components/Tooltip";
 import { LibraryView } from "./views/LibraryView";
 import { BuildsView } from "./views/BuildsView";
 import { NewsView } from "./views/NewsView";
+import { ChatView } from "./views/ChatView";
+import { useOverlay } from "./lib/overlay";
 import { SettingsSheet } from "./views/SettingsSheet";
 import { OpenWithSheet } from "./views/OpenWithSheet";
 
@@ -43,6 +45,7 @@ function useShortcuts() {
       if (e.key === "1") s.setTab("library");
       if (e.key === "2") s.setTab("builds");
       if (e.key === "3") s.setTab("news");
+      if (e.key === "4") s.setTab("chat");
       if (e.key === ",") s.setSettingsOpen(true);
       if (e.key.toLowerCase() === "r") {
         if (s.tab === "builds") void s.loadBuilds(s.buildsChannel, true);
@@ -93,6 +96,7 @@ export default function App() {
   const installedCount = useStore((s) => s.installed.length);
   const [fatal, setFatal] = useState<string | null>(null);
   const dropping = useFileDrop();
+  useOverlay(dropping);
 
   useDocumentClasses();
   useShortcuts();
@@ -121,6 +125,7 @@ export default function App() {
         {booted && tab === "library" && <LibraryView />}
         {booted && tab === "builds" && <BuildsView />}
         {booted && tab === "news" && <NewsView />}
+        {booted && tab === "chat" && <ChatView />}
       </div>
       {settingsOpen && <SettingsSheet />}
       <OpenWithSheet />

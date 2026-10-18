@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useOverlay } from "../lib/overlay";
 
 /** Floating panel anchored below a titlebar button. */
 export function Popover({
@@ -10,6 +11,7 @@ export function Popover({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useOverlay();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number }>({ top: 56, right: 12 });
 
