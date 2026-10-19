@@ -1,3 +1,4 @@
+mod assoc;
 mod chat;
 mod commands;
 mod download;
@@ -173,6 +174,8 @@ pub fn run() {
             commands::clear_notifications,
             commands::check_now,
             commands::take_pending_files,
+            assoc::register_blend_files,
+            assoc::blend_association,
             chat::chat_show,
             chat::chat_hide,
             updater::check_app_update,

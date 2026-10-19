@@ -55,6 +55,9 @@ interface Store {
   prevSeen: Record<SeenKey, number>;
   focusBuild: string | null;
   chatUnread: number;
+  /** Folder of the build that opens .blend files (Windows). */
+  blendAssociation: string | null;
+  associateBlendFiles(build: InstalledBuild): Promise<void>;
 
   boot(): Promise<void>;
   setTab(tab: Tab): void;
@@ -137,6 +140,7 @@ export const useStore = create<Store>((set, get) => {
     prevSeen: loadSeen(),
     focusBuild: null,
     chatUnread: 0,
+    blendAssociation: null,
 
     async boot() {
       // React StrictMode mounts twice in development; listeners must register once.
@@ -179,6 +183,7 @@ export const useStore = create<Store>((set, get) => {
       void listen("chat:open", () => get().setTab("chat"));
 
       get().queueFiles(await api.takePendingFiles());
+      void api.blendAssociation().then((dir) => set({ blendAssociation: dir }));
       void get().loadBuilds("stable");
       void get().loadBuilds("daily");
       void get().loadRecent();
@@ -301,6 +306,16 @@ export const useStore = create<Store>((set, get) => {
       try {
         const b = await api.importBuild(path);
         get().toast(tr("toast.imported", { name: nameOf(b) }), "success");
+      } catch (e) {
+        fail(e);
+      }
+    },
+
+    async associateBlendFiles(build) {
+      try {
+        await api.registerBlendFiles(build.id);
+        set({ blendAssociation: await api.blendAssociation() });
+        get().toast(tr("toast.associated", { name: nameOf(build) }), "success");
       } catch (e) {
         fail(e);
       }

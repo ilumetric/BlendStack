@@ -12,6 +12,7 @@ import {
   Terminal,
   Trash2,
   CheckCircle2,
+  FileCheck2,
 } from "lucide-react";
 import { useStore } from "../store";
 import { t, type Translate } from "../i18n";
@@ -137,6 +138,17 @@ export function installedMenu(build: InstalledBuild, update: RemoteBuild | null)
     { label: revealLabel(t), icon: <FolderOpen size={14} />, onSelect: () => api.reveal(build.path).catch(() => {}) },
     { label: t("menu.copyPath"), icon: <Copy size={14} />, onSelect: () => copyText(build.executable) },
   );
+  // Blender registers itself for .blend files on Windows and Linux; this also
+  // gives Windows the icon for Blender's taskbar button.
+  if (s.system?.os === "windows" || s.system?.os === "linux") {
+    const current = s.blendAssociation?.toLowerCase() === build.path.toLowerCase();
+    entries.push({
+      label: t("menu.associate"),
+      icon: <FileCheck2 size={14} />,
+      checked: current,
+      onSelect: () => s.associateBlendFiles(build),
+    });
+  }
   if (build.channel === "stable" || build.channel === "custom") {
     entries.push({
       label: t("menu.releaseNotes"),

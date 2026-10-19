@@ -50,6 +50,8 @@ export const api = {
   takePendingFiles: () => invoke<string[]>("take_pending_files"),
   checkAppUpdate: () => invoke<AppUpdate | null>("check_app_update"),
   installAppUpdate: () => invoke<void>("install_app_update"),
+  registerBlendFiles: (id: string) => invoke<void>("register_blend_files", { id }),
+  blendAssociation: () => invoke<string | null>("blend_association"),
 };
 
 export function errorText(e: unknown): string {
