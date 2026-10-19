@@ -41,14 +41,19 @@ const tones = [
 ];
 
 // Isometric projection of the 100×100 tile: half-diagonals W (horizontal) and H.
-// No backdrop: the stack itself is the icon, filling the canvas.
-const W = 452;
+// No backdrop: the stack itself is the icon and fills the canvas like the
+// icons next to it on the taskbar. A superellipse (n = 5) reaches only
+// 2^(-1/5) ≈ 0.87 of the way to its bounding-square corners, so the
+// projected tile is sized by that, not by its square.
+const REACH = 2 ** (-1 / 5);
+const HALF_WIDTH = 482; // drawn half-width of a tile, out of 512
+const W = HALF_WIDTH / REACH;
 const H = W * 0.56;
-const GAP = 148; // vertical distance between tiles
-const DEPTH = 36; // tile thickness
+const GAP = W * 0.327; // vertical distance between tiles
+const DEPTH = W * 0.08; // tile thickness
 const CX = 512;
-const totalHeight = 2 * H + 2 * GAP + DEPTH;
-const topY = 512 - totalHeight / 2 + H; // centre of the upper tile
+const drawnHeight = 2 * H * REACH + 2 * GAP + DEPTH;
+const topY = 512 - drawnHeight / 2 + H * REACH; // centre of the upper tile
 const project = (cy) => `matrix(${(W / 100).toFixed(4)} ${(H / 100).toFixed(4)} ${(-W / 100).toFixed(4)} ${(H / 100).toFixed(4)} ${CX} ${(cy - H).toFixed(2)})`;
 
 const defs = [];
@@ -68,12 +73,12 @@ tones.forEach((tone, i) => {
 
   // Soft shadow on the tile below.
   layers.push(`
-  <g transform="translate(0 ${DEPTH + 22})" filter="url(#shadow)" opacity="0.5">
+  <g transform="translate(0 ${(DEPTH + 18).toFixed(1)})" filter="url(#shadow)" opacity="0.5">
     <path transform="${project(cy)}" d="${TILE}" fill="#000"/>
   </g>`);
   // Thickness: the face swept downwards.
   const sweep = [];
-  for (let d = DEPTH; d > 0; d -= 2) sweep.push(`<path transform="translate(0 ${d}) ${project(cy)}" d="${TILE}"/>`);
+  for (let d = Math.round(DEPTH); d > 0; d -= 2) sweep.push(`<path transform="translate(0 ${d}) ${project(cy)}" d="${TILE}"/>`);
   layers.push(`
   <g fill="${side}">${sweep.join("")}</g>`);
   // Face: gradient, offset Blender silhouette (as in `.glyph-mark`), gloss.
