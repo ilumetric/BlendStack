@@ -1070,6 +1070,19 @@ html:not(.translucent) .card {
   animation: fade-in 0.3s var(--ease);
 }
 
+.thumb .file-kind {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+}
+
 .thumb .series {
   position: absolute;
   right: 6px;

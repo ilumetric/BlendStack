@@ -89,7 +89,12 @@ export interface RecentFile {
   modified: number;
   size: number;
   series: string;
+  kind: "recent" | "autosave" | "session" | "backup";
+  /** N of a `.blendN` backup. */
+  backup: number | null;
 }
+
+export type FileSection = "recent" | "recovery" | "backups";
 
 export interface AppNotification {
   id: string;

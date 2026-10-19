@@ -5,6 +5,7 @@ import type {
   Bootstrap,
   BuildList,
   DownloadTask,
+  FileSection,
   InstalledBuild,
   NewsList,
   RecentFile,
@@ -40,7 +41,7 @@ export const api = {
   reveal: (path: string) => invoke<void>("reveal_path", { path }),
   openUrl: (url: string) => invoke<void>("open_url", { url }),
 
-  recentFiles: () => invoke<RecentFile[]>("get_recent_files"),
+  recentFiles: (section: FileSection) => invoke<RecentFile[]>("get_recent_files", { section }),
   thumbnail: (path: string) => invoke<string | null>("get_thumbnail", { path }),
 
   notifications: () => invoke<AppNotification[]>("get_notifications"),

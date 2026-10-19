@@ -1,4 +1,7 @@
-//! Recent files from Blender's own `recent-files.txt` lists, and .blend thumbnails.
+//! Files for the Library: recent files from Blender's own `recent-files.txt`
+//! lists, recovery files Blender leaves in its temp folder (autosaves and the
+//! last session), backups next to recent files (`.blend1`, `.blend2`, …),
+//! and the thumbnails embedded in .blend files.
 
 use crate::error::{msg, Result};
 use base64::Engine;
@@ -13,13 +16,23 @@ use std::path::{Path, PathBuf};
 #[serde(rename_all = "camelCase")]
 pub struct RecentFile {
     pub path: String,
+    /// Display name: the project name, without autosave or backup suffixes.
     pub name: String,
     pub folder: String,
     pub modified: i64,
     pub size: u64,
-    /// Blender series whose list mentioned the file, e.g. `5.1`.
+    /// Blender series that saved the file, e.g. `5.1`.
     pub series: String,
+    /// `recent`, `autosave`, `session` (last session) or `backup`.
+    pub kind: String,
+    /// Backup number for `.blendN` files.
+    pub backup: Option<u32>,
 }
+
+/// Blender's internal files in its temp folder; never real projects.
+const INTERNAL_FILES: &[&str] = &["quit.blend", "copybuffer.blend"];
+/// Blender keeps at most 32 save versions.
+const MAX_BACKUPS: u32 = 32;
 
 /// Blender's per-user configuration root.
 fn config_root() -> Option<PathBuf> {
@@ -33,6 +46,58 @@ fn config_root() -> Option<PathBuf> {
     })
 }
 
+fn normalized(path: &Path) -> String {
+    let s = path.to_string_lossy().into_owned();
+    if cfg!(windows) {
+        s.to_lowercase()
+    } else {
+        s
+    }
+}
+
+/// Files in the system temp folder are Blender's own (autosaves, last
+/// session, copy buffer); they belong in Recovery, not in Recent.
+fn in_temp_dir(path: &Path) -> bool {
+    let temp = normalized(&std::env::temp_dir());
+    let parent = path.parent().map(normalized).unwrap_or_default();
+    parent.trim_end_matches(['\\', '/']) == temp.trim_end_matches(['\\', '/'])
+}
+
+fn entry(
+    path: &Path,
+    meta: &std::fs::Metadata,
+    name: String,
+    series: String,
+    kind: &str,
+) -> RecentFile {
+    RecentFile {
+        path: path.to_string_lossy().into_owned(),
+        name,
+        folder: path
+            .parent()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        modified: meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0),
+        size: meta.len(),
+        series,
+        kind: kind.to_string(),
+        backup: None,
+    }
+}
+
+fn stem(path: &Path) -> String {
+    path.file_stem()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Recent files from every Blender version's history, newest first.
 pub fn list(limit: usize) -> Vec<RecentFile> {
     let Some(root) = config_root() else {
         return Vec::new();
@@ -50,46 +115,123 @@ pub fn list(limit: usize) -> Vec<RecentFile> {
             continue;
         };
         for line in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
-            let key = if cfg!(windows) {
-                line.to_lowercase()
-            } else {
-                line.to_string()
-            };
-            if !seen.insert(key) {
+            let path = Path::new(line);
+            if is_internal(path) || !seen.insert(normalized(path)) {
                 continue;
             }
-            let path = Path::new(line);
             let Ok(meta) = std::fs::metadata(path) else {
                 continue;
             };
-            if !meta.is_file() {
-                continue;
+            if meta.is_file() {
+                files.push(entry(path, &meta, stem(path), series.clone(), "recent"));
             }
-            files.push(RecentFile {
-                path: line.to_string(),
-                name: path
-                    .file_stem()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default(),
-                folder: path
-                    .parent()
-                    .and_then(|p| p.file_name())
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default(),
-                modified: meta
-                    .modified()
-                    .ok()
-                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                    .map(|d| d.as_secs() as i64)
-                    .unwrap_or(0),
-                size: meta.len(),
-                series: series.clone(),
-            });
         }
     }
     files.sort_by_key(|f| std::cmp::Reverse(f.modified));
     files.truncate(limit);
     files
+}
+
+/// Autosaves (`Name_PID_autosave.blend`, `PID_autosave.blend`) and the last
+/// session (`quit.blend`) from the temp folder, newest first.
+pub fn recovery(limit: usize) -> Vec<RecentFile> {
+    let Ok(entries) = std::fs::read_dir(std::env::temp_dir()) else {
+        return Vec::new();
+    };
+    let mut files = Vec::new();
+    for e in entries.flatten() {
+        let file_name = e.file_name().to_string_lossy().into_owned();
+        let lower = file_name.to_lowercase();
+        let kind = if lower == "quit.blend" {
+            "session"
+        } else if lower.ends_with("_autosave.blend") {
+            "autosave"
+        } else {
+            continue;
+        };
+        let Ok(meta) = e.metadata() else { continue };
+        if !meta.is_file() {
+            continue;
+        }
+        let path = e.path();
+        // "Woodshed_27200_autosave.blend" → "Woodshed"; unsaved files have no name.
+        let name = if kind == "autosave" {
+            let base = &file_name[..file_name.len() - "_autosave.blend".len()];
+            match base.rsplit_once('_') {
+                Some((project, pid)) if pid.chars().all(|c| c.is_ascii_digit()) => {
+                    project.to_string()
+                }
+                _ => String::new(),
+            }
+        } else {
+            String::new()
+        };
+        let series = blend_series(&path).unwrap_or_default();
+        files.push(entry(&path, &meta, name, series, kind));
+    }
+    files.sort_by_key(|f| std::cmp::Reverse(f.modified));
+    files.truncate(limit);
+    files
+}
+
+/// Backups Blender keeps next to saved files: `Name.blend1` is the previous
+/// save, `Name.blend2` the one before, and so on.
+pub fn backups(limit: usize) -> Vec<RecentFile> {
+    let mut files = Vec::new();
+    for recent in list(60) {
+        let path = PathBuf::from(&recent.path);
+        for n in 1..=MAX_BACKUPS {
+            let mut backup = path.clone().into_os_string();
+            backup.push(n.to_string());
+            let backup = PathBuf::from(backup);
+            let Ok(meta) = std::fs::metadata(&backup) else {
+                break;
+            };
+            // The series of the saved file; reading each backup could pull it from a cloud drive.
+            let mut file = entry(
+                &backup,
+                &meta,
+                recent.name.clone(),
+                recent.series.clone(),
+                "backup",
+            );
+            file.backup = Some(n);
+            files.push(file);
+        }
+    }
+    files.sort_by_key(|f| std::cmp::Reverse(f.modified));
+    files.truncate(limit);
+    files
+}
+
+/// Blender series that wrote a .blend file, read from its header.
+fn blend_series(path: &Path) -> Option<String> {
+    let mut head = [0u8; 17];
+    open_blend(path).ok()?.read_exact(&mut head).ok()?;
+    if &head[..7] != b"BLENDER" {
+        return None;
+    }
+    let digits = match head[7] {
+        // Classic header: "BLENDER-v405".
+        b'_' | b'-' => &head[9..12],
+        // Blender 5 header: "BLENDER17-01v0502".
+        b'0'..=b'9' => &head[13..17],
+        _ => return None,
+    };
+    let version: u32 = std::str::from_utf8(digits).ok()?.parse().ok()?;
+    Some(format!("{}.{}", version / 100, version % 100))
+}
+
+/// Blender's own files (last session, copy buffer, autosaves) — shown in
+/// Recovery, never in Recent, even with a custom temp folder.
+fn is_internal(path: &Path) -> bool {
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    in_temp_dir(path)
+        || INTERNAL_FILES.contains(&name.as_str())
+        || name.ends_with("_autosave.blend")
 }
 
 /// PNG data URL of the thumbnail embedded in a .blend file, cached on disk.
@@ -269,5 +411,28 @@ mod tests {
         let (w, h, rgba) = thumb.expect("file has no thumbnail");
         assert_eq!(rgba.len(), (w * h * 4) as usize);
         println!("thumbnail {w}x{h}");
+    }
+}
+
+#[cfg(test)]
+mod list_tests {
+    /// `cargo test lists_real_files -- --ignored --nocapture` prints the
+    /// three Library lists for the current user.
+    #[test]
+    #[ignore]
+    fn lists_real_files() {
+        for (name, files) in [
+            ("recent", super::list(40)),
+            ("recovery", super::recovery(60)),
+            ("backups", super::backups(60)),
+        ] {
+            println!("== {name}: {}", files.len());
+            for f in files.iter().take(6) {
+                println!(
+                    "  {:<22} {:<9} {:?} {:<4} {}",
+                    f.name, f.kind, f.backup, f.series, f.path
+                );
+            }
+        }
     }
 }

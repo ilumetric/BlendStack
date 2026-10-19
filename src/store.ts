@@ -7,6 +7,7 @@ import type {
   AppNotification,
   BuildList,
   DownloadTask,
+  FileSection,
   InstalledBuild,
   NewsList,
   RecentFile,
@@ -43,7 +44,10 @@ interface Store {
   news: { list: NewsList | null; loading: boolean };
   downloads: Record<string, DownloadTask>;
   notifications: AppNotification[];
-  recent: RecentFile[] | null;
+  /** Library file lists; `null` until loaded. */
+  files: Record<FileSection, RecentFile[] | null>;
+  fileSection: FileSection;
+  setFileSection(section: FileSection): void;
   thumbs: Record<string, string | null>;
   tab: Tab;
   buildsChannel: RemoteChannel;
@@ -129,7 +133,8 @@ export const useStore = create<Store>((set, get) => {
     news: { list: null, loading: false },
     downloads: {},
     notifications: [],
-    recent: null,
+    files: { recent: null, recovery: null, backups: null },
+    fileSection: "recent",
     thumbs: {},
     tab: "library",
     buildsChannel: "stable",
@@ -240,11 +245,19 @@ export const useStore = create<Store>((set, get) => {
     },
 
     async loadRecent() {
+      const section = get().fileSection;
+      let list: RecentFile[];
       try {
-        set({ recent: await api.recentFiles() });
+        list = await api.recentFiles(section);
       } catch {
-        set({ recent: [] });
+        list = [];
       }
+      set((s) => ({ files: { ...s.files, [section]: list } }));
+    },
+
+    setFileSection(section) {
+      set({ fileSection: section });
+      void get().loadRecent();
     },
 
     loadThumb(path) {

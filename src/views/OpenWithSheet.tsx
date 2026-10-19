@@ -13,12 +13,13 @@ export function OpenWithSheet() {
   const files = useStore((s) => s.openFiles);
   const installed = useStore((s) => s.installed);
   const settings = useStore((s) => s.settings);
-  const recent = useStore((s) => s.recent);
+  const lists = useStore((s) => s.files);
   const launch = useStore((s) => s.launch);
   const file = files[0];
 
   const builds = useMemo(() => sortInstalled(installed), [installed]);
-  const fileSeries = recent?.find((r) => r.path === file)?.series ?? "";
+  const fileSeries =
+    [...(lists.recent ?? []), ...(lists.recovery ?? []), ...(lists.backups ?? [])].find((r) => r.path === file)?.series ?? "";
   const suggested = bestForSeries(installed, fileSeries, resolveDefault(installed, settings));
   const [selected, setSelected] = useState<string | null>(null);
 

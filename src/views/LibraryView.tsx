@@ -7,7 +7,8 @@ import { api } from "../lib/api";
 import { bestForSeries, findUpdate, resolveDefault, sortInstalled, tone } from "../lib/builds";
 import { relativeTime } from "../lib/format";
 import { buildName, cycleLabel } from "../lib/naming";
-import type { Channel, InstalledBuild, RecentFile, RemoteBuild, Settings } from "../lib/types";
+import type { Channel, FileSection, InstalledBuild, RecentFile, RemoteBuild, Settings } from "../lib/types";
+import { Segmented } from "../components/Segmented";
 import { Glyph } from "../components/bits";
 import { openContextMenu, openMenuAt, type MenuEntry } from "../components/Menu";
 import { installedMenu, pickBlendFile, revealLabel } from "./buildMenu";
@@ -208,6 +209,16 @@ function RecentCard({ file, builds, fallback }: { file: RecentFile; builds: Inst
     openContextMenu(e, items);
   };
 
+  const caption =
+    file.kind === "session"
+      ? tr("library.kind.session")
+      : file.kind === "autosave"
+        ? tr("library.kind.autosave")
+        : file.kind === "backup"
+          ? tr("library.kind.backup", { n: file.backup ?? 1 })
+          : file.folder;
+  const name = file.name || (file.kind === "session" ? tr("library.kind.session") : tr("library.untitled"));
+
   return (
     <button
       className="file-card"
@@ -218,11 +229,12 @@ function RecentCard({ file, builds, fallback }: { file: RecentFile; builds: Inst
     >
       <div className="thumb">
         {thumb ? <img src={thumb} alt="" draggable={false} /> : <FileBox size={30} strokeWidth={1.4} />}
-        <span className="series">{file.series}</span>
+        {file.series && <span className="series">{file.series}</span>}
+        {file.kind === "backup" && <span className="file-kind">.blend{file.backup}</span>}
       </div>
-      <div className="file-name">{file.name}</div>
+      <div className="file-name">{name}</div>
       <div className="file-meta">
-        {relativeTime(file.modified, lang)} · {file.folder}
+        {relativeTime(file.modified, lang)} · {caption}
       </div>
     </button>
   );
@@ -232,7 +244,9 @@ export function LibraryView() {
   const tr = useT();
   const installed = useStore((s) => s.installed);
   const settings = useStore((s) => s.settings);
-  const recent = useStore((s) => s.recent);
+  const section = useStore((s) => s.fileSection);
+  const setSection = useStore((s) => s.setFileSection);
+  const files = useStore((s) => s.files[s.fileSection]);
   const launch = useStore((s) => s.launch);
   const importBuild = useStore((s) => s.importBuild);
   const [query, setQuery] = useState("");
@@ -315,21 +329,29 @@ export function LibraryView() {
 
       <main className="library-main">
         <div className="page-header">
-          <h1>{tr("library.recent")}</h1>
+          <Segmented<FileSection>
+            value={section}
+            onChange={setSection}
+            segments={[
+              { value: "recent", label: tr("library.section.recent") },
+              { value: "recovery", label: tr("library.section.recovery") },
+              { value: "backups", label: tr("library.section.backups") },
+            ]}
+          />
           <span className="spacer" />
           <button className="btn" onClick={openFile} disabled={!installed.length}>
             <FileBox size={14} />
             {tr("library.openFile")}
           </button>
         </div>
-        {recent && recent.length === 0 && (
+        {files && files.length === 0 && (
           <div className="placeholder">
             <FileBox size={36} strokeWidth={1.3} />
-            {tr("library.recent.empty")}
+            {tr(section === "recovery" ? "library.recovery.empty" : section === "backups" ? "library.backups.empty" : "library.recent.empty")}
           </div>
         )}
         <div className="files-grid">
-          {(recent ?? []).map((f) => (
+          {(files ?? []).map((f) => (
             <RecentCard key={f.path} file={f} builds={installed} fallback={fallback} />
           ))}
         </div>

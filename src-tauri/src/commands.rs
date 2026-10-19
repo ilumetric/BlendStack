@@ -340,10 +340,14 @@ pub fn open_url(app: AppHandle, url: String) -> Result<()> {
 }
 
 #[tauri::command]
-pub async fn get_recent_files() -> Result<Vec<RecentFile>> {
-    tauri::async_runtime::spawn_blocking(|| recent::list(40))
-        .await
-        .map_err(|e| msg(e.to_string()))
+pub async fn get_recent_files(section: Option<String>) -> Result<Vec<RecentFile>> {
+    tauri::async_runtime::spawn_blocking(move || match section.as_deref() {
+        Some("recovery") => recent::recovery(60),
+        Some("backups") => recent::backups(60),
+        _ => recent::list(40),
+    })
+    .await
+    .map_err(|e| msg(e.to_string()))
 }
 
 #[tauri::command]
