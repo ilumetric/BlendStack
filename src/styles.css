@@ -2080,6 +2080,13 @@ html:not(.translucent) .card {
   }
 }
 
+/* The narrowest titlebar has no room for the repository link. */
+@media (max-width: 640px) {
+  .titlebar .github {
+    display: none;
+  }
+}
+
 /* ───────────────────────── Superellipse corners ───────────────────────── */
 
 /* Every rounded rectangle gets superellipse (squircle) corners with the same

@@ -209,6 +209,7 @@ export const ru: Record<MessageKey, string> = {
   "toast.notBlend": "Открывать можно только файлы .blend",
 
   "fund.tooltip": "Поддержать Blender — Development Fund",
+  "github.tooltip": "Blend Stack на GitHub",
 
   "window.minimize": "Свернуть",
   "window.maximize": "Развернуть",

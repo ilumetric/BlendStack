@@ -207,6 +207,7 @@ export const en = {
   "toast.notBlend": "Only .blend files can be opened",
 
   "fund.tooltip": "Support Blender — Development Fund",
+  "github.tooltip": "Blend Stack on GitHub",
 
   "window.minimize": "Minimize",
   "window.maximize": "Maximize",
