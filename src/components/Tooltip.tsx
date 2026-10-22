@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const DELAY = 450;
 /** Matches the icon-only tab breakpoint in styles.css. */
-const COMPACT_WIDTH = 640;
+const COMPACT_WIDTH = 860;
 
 /**
  * Replaces native `title` tooltips app-wide with tooltips in the app's style.

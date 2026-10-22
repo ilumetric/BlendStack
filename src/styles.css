@@ -228,9 +228,12 @@ html:not(.translucent) .app {
   background: var(--window-bg);
 }
 
+/* Three columns: the tabs stay centred while there is room and slide
+   aside (never overlap) when the window gets narrow. */
 .titlebar {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
   align-items: center;
   gap: 12px;
   padding: 0 0 0 16px;
@@ -257,14 +260,15 @@ html:not(.translucent) .app {
 }
 
 .titlebar-center {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  justify-self: center;
+}
+
+.brand {
+  justify-self: start;
 }
 
 .titlebar-actions {
-  margin-left: auto;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -349,7 +353,7 @@ html:not(.translucent) .app {
 @keyframes view-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(8px) scale(0.995);
   }
 }
 
@@ -863,6 +867,7 @@ html:not(.translucent) .card {
   grid-template-columns: minmax(330px, 380px) 1fr;
   height: 100%;
   min-height: 0;
+  transition: grid-template-columns 0.45s var(--ease);
 }
 
 .library-side {
@@ -1888,6 +1893,193 @@ html:not(.translucent) .card {
   margin-left: auto;
 }
 
+/* ───────────────────────── Motion ───────────────────────── */
+
+/* Lists rise in one after another (index from lib/motion.ts). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+.enter {
+  animation: rise 0.5s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 32ms);
+}
+
+/* Badges and dots pop in with a little spring. */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+.seg-badge,
+.seg-dot,
+.new-dot,
+.icon-btn .dot,
+.update-chip,
+.notif-unread {
+  animation: pop 0.45s var(--spring) both;
+}
+
+/* Hover life: tiles tilt, thumbnails zoom, cards lift. */
+.row .glyph {
+  transition: transform 0.4s var(--spring);
+}
+
+.row:hover .glyph {
+  transform: scale(1.06) rotate(-3deg);
+}
+
+.file-card {
+  transition: background 0.15s, transform 0.35s var(--spring);
+}
+
+.file-card:hover {
+  transform: translateY(-3px);
+}
+
+.file-card .thumb img {
+  transition: transform 0.6s var(--ease);
+}
+
+.file-card:hover .thumb img {
+  transform: scale(1.05);
+}
+
+.icon-btn svg {
+  transition: transform 0.25s var(--spring);
+}
+
+.icon-btn:active svg {
+  transform: scale(0.85);
+}
+
+/* The hero's coloured glow drifts slowly. */
+@keyframes drift {
+  to {
+    transform: translate(-28px, 22px) scale(1.18);
+  }
+}
+
+.hero::before {
+  animation: drift 9s ease-in-out infinite alternate;
+}
+
+/* Launch: a light sweep and a nudge of the play icon. */
+.launch-split {
+  position: relative;
+}
+
+.launch-split::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.38) 50%, transparent 70%);
+  transform: translateX(-110%);
+}
+
+.launch-split.firing::after {
+  animation: sweep 0.8s var(--ease);
+}
+
+.launch-split.firing .launch-main svg {
+  animation: nudge 0.6s var(--spring);
+}
+
+@keyframes sweep {
+  to {
+    transform: translateX(110%);
+  }
+}
+
+@keyframes nudge {
+  35% {
+    transform: translateX(6px) scale(1.18);
+  }
+}
+
+/* ───────────────────────── Library rail ───────────────────────── */
+
+.library.collapsed {
+  grid-template-columns: 76px 1fr;
+}
+
+.library.collapsed .library-side {
+  padding: 16px 0 0;
+  align-items: center;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.rail-item {
+  position: relative;
+  padding: 4px;
+  border-radius: 14px;
+  animation: rise 0.45s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+  transition: transform 0.35s var(--spring);
+}
+
+.rail-item:hover {
+  transform: scale(1.08);
+}
+
+.rail-item:active {
+  transform: scale(0.95);
+}
+
+.rail-item.main .glyph {
+  --size: 50px;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--tone) 40%, transparent);
+}
+
+.rail-play {
+  position: absolute;
+  inset: 4px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  border-radius: 26%;
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.rail-item:hover .rail-play {
+  opacity: 1;
+}
+
+.rail-sep {
+  width: 30px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--separator);
+}
+
+.sidebar-toggle {
+  margin-right: 2px;
+}
+
+@media (max-width: 760px) {
+  .sidebar-toggle {
+    display: none;
+  }
+}
+
 /* ───────────────────────── Superellipse corners ───────────────────────── */
 
 /* Every rounded rectangle gets superellipse (squircle) corners with the same
@@ -1916,6 +2108,10 @@ html:not(.translucent) .card {
   }
 
   /* Version tiles are whole superellipses (exponent 5), like app icons. */
+  .rail-play {
+    border-radius: 50%;
+    corner-shape: superellipse(2.32);
+  }
   .glyph {
     border-radius: 50%;
     corner-shape: superellipse(2.32);
@@ -1927,6 +2123,8 @@ html:not(.translucent) .card {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -1946,28 +2144,22 @@ html:not(.translucent) .card {
   display: none;
 }
 
-@media (max-width: 760px) {
+/* The titlebar compacts in steps before anything could collide. */
+@media (max-width: 980px) {
   .brand-name {
     display: none;
   }
-
-  /* Tabs move into the flow so they never collide with the buttons. */
   .titlebar {
-    gap: 6px;
+    gap: 8px;
     padding-left: 14px;
-  }
-  .titlebar-center {
-    position: static;
-    transform: none;
-    margin: 0 auto;
-  }
-  .titlebar-actions {
-    margin-left: 0;
   }
   .segmented.large button {
     min-width: 0;
-    padding: 5px 13px;
+    padding: 5px 14px;
   }
+}
+
+@media (max-width: 760px) {
 
   /* Library: version switcher on top, recent files below in two columns. */
   .library {
@@ -2043,8 +2235,8 @@ html:not(.translucent) .card {
   }
 }
 
-/* Very narrow: tabs become icons (names stay as tooltips). */
-@media (max-width: 640px) {
+/* Narrower: tabs become icons (names stay as tooltips). */
+@media (max-width: 860px) {
   .titlebar .seg-icon {
     display: inline-grid;
   }

@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ChevronDown, FileBox, FolderOpen, FolderPlus, MoreHorizontal, Play, Search, Star } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  FileBox,
+  FolderOpen,
+  FolderPlus,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Play,
+  Search,
+  Star,
+} from "lucide-react";
 import { useStore } from "../store";
 import { useT, type Translate } from "../i18n";
 import { api } from "../lib/api";
 import { bestForSeries, findUpdate, resolveDefault, sortInstalled, tone } from "../lib/builds";
 import { relativeTime } from "../lib/format";
+import { stagger } from "../lib/motion";
 import { buildName, cycleLabel } from "../lib/naming";
 import type { Channel, FileSection, InstalledBuild, RecentFile, RemoteBuild, Settings } from "../lib/types";
 import { Segmented } from "../components/Segmented";
@@ -15,6 +28,60 @@ import { installedMenu, pickBlendFile, revealLabel } from "./buildMenu";
 import logo from "../assets/logo.svg";
 
 const CHANNEL_ORDER: Channel[] = ["stable", "daily", "experimental", "custom"];
+const RAIL_KEY = "blendstack.libraryCollapsed";
+const NARROW = "(max-width: 760px)";
+
+function useMedia(query: string) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setMatches(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [query]);
+  return matches;
+}
+
+/** Collapsed sidebar: the default build on top, every installed build below. */
+function Rail({ builds, settings }: { builds: InstalledBuild[]; settings: Settings | null }) {
+  const tr = useT();
+  const launch = useStore((s) => s.launch);
+  const setTab = useStore((s) => s.setTab);
+  const updates = useUpdates(builds);
+  const current = resolveDefault(builds, settings);
+  if (!current) {
+    return (
+      <div className="rail">
+        <button className="rail-item" title={tr("library.empty.browse")} onClick={() => setTab("builds")}>
+          <Download size={18} />
+        </button>
+      </div>
+    );
+  }
+  const others = sortInstalled(builds).filter((b) => b.id !== current.id);
+  const item = (b: InstalledBuild, i: number, main = false) => (
+    <button
+      key={b.id}
+      className={`rail-item${main ? " main" : ""}`}
+      style={stagger(i)}
+      title={`${tr("common.launch")} ${buildName(b, tr, settings?.labels)}`}
+      onClick={() => launch(b)}
+      onContextMenu={(e) => openContextMenu(e, installedMenu(b, updates[b.id] ?? null))}
+    >
+      <Glyph build={b} size={main ? undefined : "sm"} />
+      <span className="rail-play">
+        <Play size={main ? 14 : 11} fill="currentColor" />
+      </span>
+    </button>
+  );
+  return (
+    <div className="rail">
+      {item(current, 0, true)}
+      {others.length > 0 && <div className="rail-sep" />}
+      {others.map((b, i) => item(b, i + 1))}
+    </div>
+  );
+}
 
 function useUpdates(installed: InstalledBuild[]) {
   const remote = useStore((s) => s.remote);
@@ -47,6 +114,7 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
   const launch = useStore((s) => s.launch);
   const patchSettings = useStore((s) => s.patchSettings);
   const updates = useUpdates(builds);
+  const [firing, setFiring] = useState(false);
   const current = resolveDefault(builds, settings);
   if (!current) return null;
 
@@ -82,8 +150,16 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
           </div>
         </div>
       </div>
-      <div className="launch-split">
-        <button className="launch-main" onClick={() => launch(current)} title="Ctrl+Enter">
+      <div className={`launch-split${firing ? " firing" : ""}`}>
+        <button
+          className="launch-main"
+          title="Ctrl+Enter"
+          onClick={() => {
+            setFiring(true);
+            window.setTimeout(() => setFiring(false), 800);
+            void launch(current);
+          }}
+        >
           <Play size={16} fill="currentColor" />
           {tr("library.launchDefault")}
         </button>
@@ -122,7 +198,7 @@ function EmptyHero() {
   );
 }
 
-function InstalledRow({ build, update }: { build: InstalledBuild; update: RemoteBuild | null }) {
+function InstalledRow({ build, update, index }: { build: InstalledBuild; update: RemoteBuild | null; index: number }) {
   const tr = useT();
   const lang = useStore((s) => s.lang);
   const settings = useStore((s) => s.settings);
@@ -135,7 +211,8 @@ function InstalledRow({ build, update }: { build: InstalledBuild; update: Remote
 
   return (
     <div
-      className="row"
+      className="row enter"
+      style={stagger(index)}
       onDoubleClick={() => launch(build)}
       onContextMenu={(e) => openContextMenu(e, installedMenu(build, update))}
     >
@@ -182,7 +259,17 @@ function InstalledRow({ build, update }: { build: InstalledBuild; update: Remote
   );
 }
 
-function RecentCard({ file, builds, fallback }: { file: RecentFile; builds: InstalledBuild[]; fallback: InstalledBuild | null }) {
+function RecentCard({
+  file,
+  builds,
+  fallback,
+  index,
+}: {
+  file: RecentFile;
+  builds: InstalledBuild[];
+  fallback: InstalledBuild | null;
+  index: number;
+}) {
   const tr = useT();
   const lang = useStore((s) => s.lang);
   const thumb = useStore((s) => s.thumbs[file.path]);
@@ -221,7 +308,8 @@ function RecentCard({ file, builds, fallback }: { file: RecentFile; builds: Inst
 
   return (
     <button
-      className="file-card"
+      className="file-card enter"
+      style={stagger(index)}
       title={file.path}
       disabled={!target}
       onClick={() => target && launch(target, file.path)}
@@ -252,6 +340,25 @@ export function LibraryView() {
   const [query, setQuery] = useState("");
   const updates = useUpdates(installed);
   const fallback = resolveDefault(installed, settings);
+  const narrow = useMedia(NARROW);
+  const [collapsedPref, setCollapsedPref] = useState(() => {
+    try {
+      return localStorage.getItem(RAIL_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  // A narrow window already shows only the version card; no rail there.
+  const collapsed = collapsedPref && !narrow;
+  const toggleRail = () => {
+    const next = !collapsedPref;
+    setCollapsedPref(next);
+    try {
+      localStorage.setItem(RAIL_KEY, next ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  };
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -283,11 +390,12 @@ export function LibraryView() {
   };
 
   return (
-    <div className="view library">
+    <div className={`view library${collapsed ? " collapsed" : ""}`}>
       <aside className="library-side">
-        {installed.length ? <Hero builds={installed} settings={settings} /> : <EmptyHero />}
+        {collapsed && <Rail builds={installed} settings={settings} />}
+        {!collapsed && (installed.length ? <Hero builds={installed} settings={settings} /> : <EmptyHero />)}
 
-        {installed.length > 0 && (
+        {!collapsed && installed.length > 0 && (
           <>
             <div className="section-title">
               {tr("library.installed")}
@@ -316,8 +424,8 @@ export function LibraryView() {
                       {g.title}
                     </div>
                   )}
-                  {g.builds.map((b) => (
-                    <InstalledRow key={b.id} build={b} update={updates[b.id] ?? null} />
+                  {g.builds.map((b, i) => (
+                    <InstalledRow key={b.id} build={b} update={updates[b.id] ?? null} index={i} />
                   ))}
                 </div>
               ))}
@@ -329,6 +437,13 @@ export function LibraryView() {
 
       <main className="library-main">
         <div className="page-header">
+          <button
+            className="icon-btn sidebar-toggle"
+            title={collapsed ? tr("library.expand") : tr("library.collapse")}
+            onClick={toggleRail}
+          >
+            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+          </button>
           <Segmented<FileSection>
             value={section}
             onChange={setSection}
@@ -350,9 +465,9 @@ export function LibraryView() {
             {tr(section === "recovery" ? "library.recovery.empty" : section === "backups" ? "library.backups.empty" : "library.recent.empty")}
           </div>
         )}
-        <div className="files-grid">
-          {(files ?? []).map((f) => (
-            <RecentCard key={f.path} file={f} builds={installed} fallback={fallback} />
+        <div className="files-grid" key={section}>
+          {(files ?? []).map((f, i) => (
+            <RecentCard key={f.path} file={f} builds={installed} fallback={fallback} index={i} />
           ))}
         </div>
       </main>

@@ -248,6 +248,7 @@ pub async fn delete_build(app: AppHandle, state: State<'_, AppState>, id: String
     let saved = state.update_settings(|s| s.forget_build(&id))?;
     emit_settings_changed(&app, &saved);
     emit_library_changed(&app);
+    crate::assoc::repair_in_background(&app);
     Ok(())
 }
 

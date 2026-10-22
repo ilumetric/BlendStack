@@ -192,6 +192,8 @@ async fn run(app: AppHandle, id: String) {
                 t.installed_id = Some(installed.id.clone());
             });
             emit_library_changed(&app);
+            // An update may have removed the build registered for .blend files.
+            crate::assoc::repair_in_background(&app);
         }
         Err(e) => {
             let cancelled = cancel.load(Ordering::Relaxed);

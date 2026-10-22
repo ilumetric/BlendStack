@@ -59,6 +59,8 @@ export const ru: Record<MessageKey, string> = {
   "library.kind.session": "Последняя сессия",
   "library.kind.backup": "Бэкап {n}",
   "library.untitled": "Без названия",
+  "library.collapse": "Свернуть панель",
+  "library.expand": "Развернуть панель",
   "library.openFile": "Открыть файл…",
   "library.updateTo": "Обновить до {version}",
   "library.built": "собрано {time}",

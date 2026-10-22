@@ -123,6 +123,7 @@ pub fn run() {
             builder.build()?;
 
             std::thread::spawn(move || library::sweep(&library_dir));
+            assoc::repair_in_background(app.handle());
             tray::create(app.handle())?;
             #[cfg(windows)]
             {

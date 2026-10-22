@@ -57,6 +57,8 @@ export const en = {
   "library.kind.session": "Last session",
   "library.kind.backup": "Backup {n}",
   "library.untitled": "Untitled",
+  "library.collapse": "Collapse Sidebar",
+  "library.expand": "Expand Sidebar",
   "library.openFile": "Open File…",
   "library.updateTo": "Update to {version}",
   "library.built": "built {time}",

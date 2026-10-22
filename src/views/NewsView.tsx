@@ -4,6 +4,7 @@ import { useStore } from "../store";
 import { useT } from "../i18n";
 import { api } from "../lib/api";
 import { formatDate, relativeTime } from "../lib/format";
+import { stagger } from "../lib/motion";
 import type { NewsItem } from "../lib/types";
 import { Segmented } from "../components/Segmented";
 import logo from "../assets/logo.svg";
@@ -32,12 +33,17 @@ function Cover({ src }: { src: string | null }) {
   );
 }
 
-function NewsCard({ item, featured, isNew }: { item: NewsItem; featured: boolean; isNew: boolean }) {
+function NewsCard({ item, featured, isNew, index }: { item: NewsItem; featured: boolean; isNew: boolean; index: number }) {
   const tr = useT();
   const lang = useStore((s) => s.lang);
   const source = item.source === "developers" ? tr("news.developers") : tr("news.blender");
   return (
-    <button className={`card news-card${featured ? " featured" : ""}`} onClick={() => api.openUrl(item.link)} title={item.link}>
+    <button
+      className={`card news-card enter${featured ? " featured" : ""}`}
+      style={stagger(index)}
+      onClick={() => api.openUrl(item.link)}
+      title={item.link}
+    >
       <Cover src={item.image} />
       <div className="news-body">
         <div className="news-kicker">
@@ -105,7 +111,7 @@ export function NewsView() {
         )}
         <div className="news-grid">
           {items.map((item, i) => (
-            <NewsCard key={item.id} item={item} featured={i === 0} isNew={item.date > prevSeen} />
+            <NewsCard key={item.id} item={item} featured={i === 0} isNew={item.date > prevSeen} index={i} />
           ))}
         </div>
       </div>

@@ -6,12 +6,18 @@
 //! windows, which is where Windows takes the taskbar icon from: without a
 //! registration (for example after another launcher unregistered Blender)
 //! the taskbar shows a blank icon.
+//!
+//! When the registered build disappears (updated or deleted), the
+//! registration is moved to another installed build of the same series, so
+//! the icon and the association keep working. Nothing is registered unless
+//! the user did it once.
 
 use crate::error::{msg, Result};
+use crate::model::{InstalledBuild, Version};
 use crate::state::AppState;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use tauri::State;
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[tauri::command]
 pub async fn register_blend_files(state: State<'_, AppState>, id: String) -> Result<()> {
@@ -19,32 +25,100 @@ pub async fn register_blend_files(state: State<'_, AppState>, id: String) -> Res
         .find_installed(&id)
         .ok_or_else(|| msg("build not found"))?;
     let exe = PathBuf::from(&build.executable);
-    tauri::async_runtime::spawn_blocking(move || -> Result<()> {
-        let mut cmd = Command::new(&exe);
-        cmd.arg("--register");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
-        let status = cmd
-            .status()
-            .map_err(|e| msg(format!("could not run Blender: {e}")))?;
-        if !status.success() {
-            return Err(msg("Blender could not register .blend files"));
-        }
-        #[cfg(windows)]
-        notify_shell();
-        Ok(())
-    })
-    .await
-    .map_err(|e| msg(e.to_string()))?
+    tauri::async_runtime::spawn_blocking(move || register(&exe))
+        .await
+        .map_err(|e| msg(e.to_string()))?
 }
 
 /// Folder of the Blender build that currently opens .blend files, if any.
 #[tauri::command]
 pub fn blend_association() -> Option<String> {
+    association().map(|(_, dir)| dir.to_string_lossy().into_owned())
+}
+
+/// Runs Blender's own registration for the build at `exe`.
+pub fn register(exe: &Path) -> Result<()> {
+    let mut cmd = Command::new(exe);
+    cmd.arg("--register");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let status = cmd
+        .status()
+        .map_err(|e| msg(format!("could not run Blender: {e}")))?;
+    if !status.success() {
+        return Err(msg("Blender could not register .blend files"));
+    }
+    #[cfg(windows)]
+    notify_shell();
+    Ok(())
+}
+
+/// Moves a Blender registration whose build no longer exists to an installed
+/// build of the same series. Returns true when it re-registered.
+pub fn repair(installed: &[InstalledBuild]) -> bool {
+    let Some((prog_id, dir)) = association() else {
+        return false;
+    };
+    // Only Blender's own registrations (`blender.X.Y`), and only broken ones.
+    let Some(series) = prog_id.strip_prefix("blender.") else {
+        return false;
+    };
+    if dir
+        .join(if cfg!(windows) {
+            "blender.exe"
+        } else {
+            "blender"
+        })
+        .is_file()
+    {
+        return false;
+    }
+    let Some(target) = installed
+        .iter()
+        .filter(|b| {
+            let v = Version::parse(&b.version);
+            format!("{}.{}", v.major, v.minor) == series
+        })
+        // Prefer stable builds, then the newest.
+        .max_by_key(|b| {
+            (
+                b.release_cycle == "stable",
+                Version::parse(&b.version),
+                b.date,
+            )
+        })
+    else {
+        return false;
+    };
+    match register(Path::new(&target.executable)) {
+        Ok(()) => {
+            log::info!("moved .blend registration {prog_id} to {}", target.path);
+            true
+        }
+        Err(e) => {
+            log::warn!("could not move .blend registration: {e}");
+            false
+        }
+    }
+}
+
+/// Runs [`repair`] off the UI thread and tells the UI when it changed anything.
+pub fn repair_in_background(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let installed = app.state::<AppState>().installed();
+        if repair(&installed) {
+            let _ = app.emit("association:changed", ());
+        }
+    });
+}
+
+/// The registered file type for .blend and the folder of its Blender.
+fn association() -> Option<(String, PathBuf)> {
     #[cfg(windows)]
     {
         let prog_id = registry::read_string(r"Software\Classes\.blend")?;
@@ -57,9 +131,8 @@ pub fn blend_association() -> Option<String> {
             .split('"')
             .next()?
             .to_string();
-        PathBuf::from(exe)
-            .parent()
-            .map(|dir| dir.to_string_lossy().into_owned())
+        let dir = PathBuf::from(exe).parent()?.to_path_buf();
+        Some((prog_id, dir))
     }
     #[cfg(not(windows))]
     {

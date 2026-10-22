@@ -189,6 +189,7 @@ export const useStore = create<Store>((set, get) => {
 
       get().queueFiles(await api.takePendingFiles());
       void api.blendAssociation().then((dir) => set({ blendAssociation: dir }));
+      void listen("association:changed", async () => set({ blendAssociation: await api.blendAssociation() }));
       void get().loadBuilds("stable");
       void get().loadBuilds("daily");
       void get().loadRecent();
