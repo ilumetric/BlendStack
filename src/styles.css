@@ -1949,10 +1949,16 @@ html:not(.translucent) .card {
   margin-right: 2px;
 }
 
-/* The narrowest titlebar has no room for the repository link. */
+/* The narrowest titlebar tightens its buttons so every one of them still fits. */
 @media (max-width: 640px) {
-  .titlebar .github {
-    display: none;
+  .titlebar-actions .icon-btn {
+    width: 30px;
+  }
+  .window-controls {
+    margin-left: 4px;
+  }
+  .window-controls button {
+    width: 42px;
   }
 }
 
