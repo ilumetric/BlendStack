@@ -18,7 +18,6 @@ import { useT, type Translate } from "../i18n";
 import { api } from "../lib/api";
 import { bestForSeries, findUpdate, resolveDefault, sortInstalled, tone } from "../lib/builds";
 import { relativeTime } from "../lib/format";
-import { stagger } from "../lib/motion";
 import { buildName, cycleLabel } from "../lib/naming";
 import type { Channel, FileSection, InstalledBuild, RecentFile, RemoteBuild, Settings } from "../lib/types";
 import { Segmented } from "../components/Segmented";
@@ -29,20 +28,9 @@ import logo from "../assets/logo.svg";
 
 const CHANNEL_ORDER: Channel[] = ["stable", "daily", "experimental", "custom"];
 const RAIL_KEY = "blendstack.libraryCollapsed";
-const NARROW = "(max-width: 760px)";
 
-function useMedia(query: string) {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const m = window.matchMedia(query);
-    const on = () => setMatches(m.matches);
-    m.addEventListener("change", on);
-    return () => m.removeEventListener("change", on);
-  }, [query]);
-  return matches;
-}
-
-/** Collapsed sidebar: the default build on top, every installed build below. */
+/** Collapsed sidebar: the default build first, every installed build after it.
+    A vertical rail beside the files; a horizontal strip above them in a narrow window. */
 function Rail({ builds, settings }: { builds: InstalledBuild[]; settings: Settings | null }) {
   const tr = useT();
   const launch = useStore((s) => s.launch);
@@ -59,11 +47,10 @@ function Rail({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
     );
   }
   const others = sortInstalled(builds).filter((b) => b.id !== current.id);
-  const item = (b: InstalledBuild, i: number, main = false) => (
+  const item = (b: InstalledBuild, main = false) => (
     <button
       key={b.id}
       className={`rail-item${main ? " main" : ""}`}
-      style={stagger(i)}
       title={`${tr("common.launch")} ${buildName(b, tr, settings?.labels)}`}
       onClick={() => launch(b)}
       onContextMenu={(e) => openContextMenu(e, installedMenu(b, updates[b.id] ?? null))}
@@ -76,9 +63,9 @@ function Rail({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
   );
   return (
     <div className="rail">
-      {item(current, 0, true)}
+      {item(current, true)}
       {others.length > 0 && <div className="rail-sep" />}
-      {others.map((b, i) => item(b, i + 1))}
+      {others.map((b) => item(b))}
     </div>
   );
 }
@@ -114,7 +101,6 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
   const launch = useStore((s) => s.launch);
   const patchSettings = useStore((s) => s.patchSettings);
   const updates = useUpdates(builds);
-  const [firing, setFiring] = useState(false);
   const current = resolveDefault(builds, settings);
   if (!current) return null;
 
@@ -150,15 +136,11 @@ function Hero({ builds, settings }: { builds: InstalledBuild[]; settings: Settin
           </div>
         </div>
       </div>
-      <div className={`launch-split${firing ? " firing" : ""}`}>
+      <div className="launch-split">
         <button
           className="launch-main"
           title="Ctrl+Enter"
-          onClick={() => {
-            setFiring(true);
-            window.setTimeout(() => setFiring(false), 800);
-            void launch(current);
-          }}
+          onClick={() => void launch(current)}
         >
           <Play size={16} fill="currentColor" />
           {tr("library.launchDefault")}
@@ -198,7 +180,7 @@ function EmptyHero() {
   );
 }
 
-function InstalledRow({ build, update, index }: { build: InstalledBuild; update: RemoteBuild | null; index: number }) {
+function InstalledRow({ build, update }: { build: InstalledBuild; update: RemoteBuild | null }) {
   const tr = useT();
   const lang = useStore((s) => s.lang);
   const settings = useStore((s) => s.settings);
@@ -211,8 +193,7 @@ function InstalledRow({ build, update, index }: { build: InstalledBuild; update:
 
   return (
     <div
-      className="row enter"
-      style={stagger(index)}
+      className="row"
       onDoubleClick={() => launch(build)}
       onContextMenu={(e) => openContextMenu(e, installedMenu(build, update))}
     >
@@ -263,12 +244,10 @@ function RecentCard({
   file,
   builds,
   fallback,
-  index,
 }: {
   file: RecentFile;
   builds: InstalledBuild[];
   fallback: InstalledBuild | null;
-  index: number;
 }) {
   const tr = useT();
   const lang = useStore((s) => s.lang);
@@ -308,8 +287,7 @@ function RecentCard({
 
   return (
     <button
-      className="file-card enter"
-      style={stagger(index)}
+      className="file-card"
       title={file.path}
       disabled={!target}
       onClick={() => target && launch(target, file.path)}
@@ -340,19 +318,16 @@ export function LibraryView() {
   const [query, setQuery] = useState("");
   const updates = useUpdates(installed);
   const fallback = resolveDefault(installed, settings);
-  const narrow = useMedia(NARROW);
-  const [collapsedPref, setCollapsedPref] = useState(() => {
+  const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(RAIL_KEY) === "1";
     } catch {
       return false;
     }
   });
-  // A narrow window already shows only the version card; no rail there.
-  const collapsed = collapsedPref && !narrow;
   const toggleRail = () => {
-    const next = !collapsedPref;
-    setCollapsedPref(next);
+    const next = !collapsed;
+    setCollapsed(next);
     try {
       localStorage.setItem(RAIL_KEY, next ? "1" : "0");
     } catch {
@@ -424,8 +399,8 @@ export function LibraryView() {
                       {g.title}
                     </div>
                   )}
-                  {g.builds.map((b, i) => (
-                    <InstalledRow key={b.id} build={b} update={updates[b.id] ?? null} index={i} />
+                  {g.builds.map((b) => (
+                    <InstalledRow key={b.id} build={b} update={updates[b.id] ?? null} />
                   ))}
                 </div>
               ))}
@@ -466,8 +441,8 @@ export function LibraryView() {
           </div>
         )}
         <div className="files-grid" key={section}>
-          {(files ?? []).map((f, i) => (
-            <RecentCard key={f.path} file={f} builds={installed} fallback={fallback} index={i} />
+          {(files ?? []).map((f) => (
+            <RecentCard key={f.path} file={f} builds={installed} fallback={fallback} />
           ))}
         </div>
       </main>

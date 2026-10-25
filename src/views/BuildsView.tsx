@@ -5,7 +5,6 @@ import { useT, type Translate } from "../i18n";
 import { api } from "../lib/api";
 import { compareVersions, normalizeCycle, prNumber, prUrl, releaseNotesUrl, series, tone } from "../lib/builds";
 import { formatBytes, formatDate, relativeTime } from "../lib/format";
-import { stagger } from "../lib/motion";
 import { buildName, cycleLabel } from "../lib/naming";
 import type { RemoteBuild, RemoteChannel } from "../lib/types";
 import { Segmented } from "../components/Segmented";
@@ -67,12 +66,10 @@ function RemoteRow({
   build,
   isNew,
   focused,
-  index,
 }: {
   build: RemoteBuild;
   isNew: boolean;
   focused: boolean;
-  index: number;
 }) {
   const tr = useT();
   const lang = useStore((s) => s.lang);
@@ -99,8 +96,7 @@ function RemoteRow({
   return (
     <div
       ref={ref}
-      className={`row enter${focused ? " focus-flash" : ""}`}
-      style={stagger(index)}
+      className={`row${focused ? " focus-flash" : ""}`}
       onContextMenu={(e) => openContextMenu(e, remoteMenu(build))}
     >
       <Glyph build={build} />
@@ -179,7 +175,7 @@ function GroupCard({ group, prevSeen, focus }: { group: Group; prevSeen: number;
       {visible.map((b, i) => (
         <div key={b.id}>
           {i > 0 && <div className="list-divider" />}
-          <RemoteRow build={b} isNew={b.date > prevSeen} focused={b.id === focus} index={i} />
+          <RemoteRow build={b} isNew={b.date > prevSeen} focused={b.id === focus} />
         </div>
       ))}
     </section>

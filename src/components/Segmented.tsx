@@ -19,12 +19,21 @@ interface Props<T extends string> {
 /** macOS-style segmented control with a sliding thumb. */
 export function Segmented<T extends string>({ value, segments, onChange, large }: Props<T>) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [thumb, setThumb] = useState<{ left: number; width: number } | null>(null);
+  const [thumb, setThumb] = useState<{ left: number; width: number; slide: boolean } | null>(null);
+  const shown = useRef<{ value: T; left: number; width: number } | null>(null);
 
+  // The thumb slides only when the selection changes; resizes and relayouts
+  // (labels turning into icons) move it at once instead of trailing behind.
   useLayoutEffect(() => {
     const measure = () => {
       const el = refs.current[value];
-      if (el) setThumb({ left: el.offsetLeft, width: el.offsetWidth });
+      if (!el) return;
+      const prev = shown.current;
+      const left = el.offsetLeft;
+      const width = el.offsetWidth;
+      if (prev && prev.value === value && prev.left === left && prev.width === width) return;
+      shown.current = { value, left, width };
+      setThumb({ left, width, slide: !!prev && prev.value !== value });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -34,7 +43,9 @@ export function Segmented<T extends string>({ value, segments, onChange, large }
 
   return (
     <div className={`segmented${large ? " large" : ""}`} role="tablist">
-      {thumb && <div className="segmented-thumb" style={{ left: thumb.left, width: thumb.width }} />}
+      {thumb && (
+        <div className={`segmented-thumb${thumb.slide ? " slide" : ""}`} style={{ left: thumb.left, width: thumb.width }} />
+      )}
       {segments.map((s) => (
         <button
           key={s.value}

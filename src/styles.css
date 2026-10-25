@@ -11,8 +11,10 @@
   --radius-md: 10px;
   --radius-sm: 7px;
 
-  --ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  /* Motion follows the platform: short, critically damped, never bouncy.
+     Layout changes snap; only state (colour, selection, overlays) animates. */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --titlebar-h: 52px;
 
   /* Light */
@@ -347,14 +349,6 @@ html:not(.translucent) .app {
 
 .view {
   height: 100%;
-  animation: view-in 0.28s var(--ease);
-}
-
-@keyframes view-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.995);
-  }
 }
 
 /* ───────────────────────── Segmented control ───────────────────────── */
@@ -375,8 +369,11 @@ html:not(.translucent) .app {
   border-radius: 7px;
   background: var(--surface-raised);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  transition: left 0.3s var(--ease), width 0.3s var(--ease);
   z-index: -1;
+}
+
+.segmented-thumb.slide {
+  transition: left 0.22s var(--ease-out), width 0.22s var(--ease-out);
 }
 
 :root[data-theme="dark"] .segmented-thumb {
@@ -449,7 +446,7 @@ html:not(.translucent) .app {
   white-space: nowrap;
   background: var(--fill);
   color: var(--text);
-  transition: background 0.15s, transform 0.15s var(--ease), opacity 0.15s;
+  transition: background 0.12s, opacity 0.12s;
 }
 
 .btn:hover {
@@ -457,7 +454,7 @@ html:not(.translucent) .app {
 }
 
 .btn:active {
-  transform: scale(0.97);
+  filter: brightness(0.92);
 }
 
 .btn:disabled {
@@ -512,7 +509,7 @@ html:not(.translucent) .app {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  transition: background 0.15s, transform 0.15s var(--ease);
+  transition: background 0.12s;
 }
 
 .pill:hover {
@@ -520,7 +517,7 @@ html:not(.translucent) .app {
 }
 
 .pill:active {
-  transform: scale(0.95);
+  filter: brightness(0.92);
 }
 
 .pill.filled {
@@ -616,7 +613,7 @@ html:not(.translucent) .app {
   box-shadow: var(--shadow-md), inset 0 0 0 0.5px var(--border);
   pointer-events: none;
   overflow-wrap: anywhere;
-  animation: fade-in 0.15s var(--ease);
+  animation: fade-in 0.12s var(--ease);
 }
 
 .icon-btn.heart:hover {
@@ -629,7 +626,7 @@ html:not(.translucent) .app {
   height: 22px;
   border-radius: 11px;
   background: var(--fill-strong);
-  transition: background 0.25s var(--ease);
+  transition: background 0.2s var(--ease);
   flex: none;
 }
 
@@ -643,7 +640,7 @@ html:not(.translucent) .app {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  transition: transform 0.25s var(--spring);
+  transition: transform 0.2s var(--ease-out);
 }
 
 .switch.on {
@@ -867,7 +864,6 @@ html:not(.translucent) .card {
   grid-template-columns: minmax(330px, 380px) 1fr;
   height: 100%;
   min-height: 0;
-  transition: grid-template-columns 0.45s var(--ease);
 }
 
 .library-side {
@@ -939,7 +935,7 @@ html:not(.translucent) .card {
 .launch-split button {
   background: var(--accent);
   color: var(--on-accent);
-  transition: background 0.15s, filter 0.15s;
+  transition: background 0.12s;
 }
 
 .launch-split button:hover {
@@ -1045,7 +1041,7 @@ html:not(.translucent) .card {
   text-align: left;
   border-radius: var(--radius-lg);
   padding: 6px;
-  transition: background 0.15s, transform 0.2s var(--ease);
+  transition: background 0.12s;
 }
 
 .file-card:hover {
@@ -1053,7 +1049,7 @@ html:not(.translucent) .card {
 }
 
 .file-card:active {
-  transform: scale(0.98);
+  background: var(--surface-pressed);
 }
 
 .thumb {
@@ -1072,7 +1068,7 @@ html:not(.translucent) .card {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  animation: fade-in 0.3s var(--ease);
+  animation: fade-in 0.2s var(--ease);
 }
 
 .thumb .file-kind {
@@ -1282,10 +1278,6 @@ html:not(.translucent) .card {
   background: var(--accent);
 }
 
-.ring-btn:hover .stop {
-  transform: scale(1.15);
-}
-
 .ring-track {
   stroke: var(--fill-strong);
 }
@@ -1337,16 +1329,15 @@ html:not(.translucent) .card {
   text-align: left;
   overflow: hidden;
   border-radius: var(--radius-xl);
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  transition: box-shadow 0.15s var(--ease);
 }
 
 .news-card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md), inset 0 0 0 0.5px var(--border);
 }
 
 .news-card:active {
-  transform: scale(0.99);
+  filter: brightness(0.96);
 }
 
 .news-image {
@@ -1365,15 +1356,11 @@ html:not(.translucent) .card {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 0.4s var(--ease), transform 0.6s var(--ease);
+  transition: opacity 0.25s var(--ease);
 }
 
 .news-image img.cover.loaded {
   opacity: 1;
-}
-
-.news-card:hover .news-image img.cover {
-  transform: scale(1.03);
 }
 
 .news-image .logo {
@@ -1475,7 +1462,7 @@ html:not(.translucent) .card {
   background: color-mix(in srgb, var(--surface-solid) 86%, transparent);
   backdrop-filter: blur(30px) saturate(1.6);
   box-shadow: var(--shadow-lg), inset 0 0 0 0.5px var(--border);
-  animation: pop-in 0.22s var(--ease);
+  animation: pop-in 0.16s var(--ease-out);
   transform-origin: top right;
   overflow: hidden;
 }
@@ -1483,7 +1470,7 @@ html:not(.translucent) .card {
 @keyframes pop-in {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-4px);
+    transform: scale(0.98);
   }
 }
 
@@ -1573,7 +1560,7 @@ html:not(.translucent) .card {
   background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
   backdrop-filter: blur(30px) saturate(1.6);
   box-shadow: var(--shadow-lg), inset 0 0 0 0.5px var(--border);
-  animation: pop-in 0.16s var(--ease);
+  animation: fade-in 0.1s var(--ease);
 }
 
 .menu-item {
@@ -1657,7 +1644,7 @@ html:not(.translucent) .card {
   background: var(--backdrop);
   display: grid;
   place-items: center;
-  animation: fade-in 0.2s var(--ease);
+  animation: fade-in 0.18s var(--ease);
 }
 
 .sheet {
@@ -1668,7 +1655,7 @@ html:not(.translucent) .card {
   border-radius: var(--radius-xl);
   background: var(--window-bg);
   box-shadow: var(--shadow-lg), inset 0 0 0 0.5px var(--border);
-  animation: sheet-in 0.32s var(--spring);
+  animation: sheet-in 0.2s var(--ease-out);
   overflow: hidden;
 }
 
@@ -1679,7 +1666,7 @@ html:not(.translucent) .card {
 @keyframes sheet-in {
   from {
     opacity: 0;
-    transform: scale(0.94) translateY(8px);
+    transform: scale(0.98);
   }
 }
 
@@ -1835,7 +1822,7 @@ html:not(.translucent) .card {
   backdrop-filter: blur(24px) saturate(1.6);
   box-shadow: var(--shadow-lg), inset 0 0 0 0.5px var(--border);
   font-weight: 550;
-  animation: toast-in 0.4s var(--spring);
+  animation: toast-in 0.22s var(--ease-out);
 }
 
 .toast svg {
@@ -1857,7 +1844,7 @@ html:not(.translucent) .card {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.96);
+    transform: translateY(6px);
   }
 }
 
@@ -1893,116 +1880,6 @@ html:not(.translucent) .card {
   margin-left: auto;
 }
 
-/* ───────────────────────── Motion ───────────────────────── */
-
-/* Lists rise in one after another (index from lib/motion.ts). */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.985);
-  }
-}
-
-.enter {
-  animation: rise 0.5s var(--ease) both;
-  animation-delay: calc(var(--i, 0) * 32ms);
-}
-
-/* Badges and dots pop in with a little spring. */
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-}
-
-.seg-badge,
-.seg-dot,
-.new-dot,
-.icon-btn .dot,
-.update-chip,
-.notif-unread {
-  animation: pop 0.45s var(--spring) both;
-}
-
-/* Hover life: tiles tilt, thumbnails zoom, cards lift. */
-.row .glyph {
-  transition: transform 0.4s var(--spring);
-}
-
-.row:hover .glyph {
-  transform: scale(1.06) rotate(-3deg);
-}
-
-.file-card {
-  transition: background 0.15s, transform 0.35s var(--spring);
-}
-
-.file-card:hover {
-  transform: translateY(-3px);
-}
-
-.file-card .thumb img {
-  transition: transform 0.6s var(--ease);
-}
-
-.file-card:hover .thumb img {
-  transform: scale(1.05);
-}
-
-.icon-btn svg {
-  transition: transform 0.25s var(--spring);
-}
-
-.icon-btn:active svg {
-  transform: scale(0.85);
-}
-
-/* The hero's coloured glow drifts slowly. */
-@keyframes drift {
-  to {
-    transform: translate(-28px, 22px) scale(1.18);
-  }
-}
-
-.hero::before {
-  animation: drift 9s ease-in-out infinite alternate;
-}
-
-/* Launch: a light sweep and a nudge of the play icon. */
-.launch-split {
-  position: relative;
-}
-
-.launch-split::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.38) 50%, transparent 70%);
-  transform: translateX(-110%);
-}
-
-.launch-split.firing::after {
-  animation: sweep 0.8s var(--ease);
-}
-
-.launch-split.firing .launch-main svg {
-  animation: nudge 0.6s var(--spring);
-}
-
-@keyframes sweep {
-  to {
-    transform: translateX(110%);
-  }
-}
-
-@keyframes nudge {
-  35% {
-    transform: translateX(6px) scale(1.18);
-  }
-}
-
 /* ───────────────────────── Library rail ───────────────────────── */
 
 .library.collapsed {
@@ -2029,17 +1906,15 @@ html:not(.translucent) .card {
   position: relative;
   padding: 4px;
   border-radius: 14px;
-  animation: rise 0.45s var(--ease) both;
-  animation-delay: calc(var(--i, 0) * 35ms);
-  transition: transform 0.35s var(--spring);
+  transition: background 0.12s;
 }
 
 .rail-item:hover {
-  transform: scale(1.08);
+  background: var(--surface-hover);
 }
 
 .rail-item:active {
-  transform: scale(0.95);
+  background: var(--surface-pressed);
 }
 
 .rail-item.main .glyph {
@@ -2056,7 +1931,7 @@ html:not(.translucent) .card {
   border-radius: 26%;
   background: rgba(0, 0, 0, 0.38);
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.12s;
 }
 
 .rail-item:hover .rail-play {
@@ -2072,12 +1947,6 @@ html:not(.translucent) .card {
 
 .sidebar-toggle {
   margin-right: 2px;
-}
-
-@media (max-width: 760px) {
-  .sidebar-toggle {
-    display: none;
-  }
 }
 
 /* The narrowest titlebar has no room for the repository link. */
@@ -2178,8 +2047,33 @@ html:not(.translucent) .card {
     padding: 14px 14px 0;
     border-right: 0;
   }
-  .library-side > :not(.hero):not(.empty-hero) {
+  .library-side > :not(.hero):not(.empty-hero):not(.rail) {
     display: none;
+  }
+  /* Collapsed: the rail turns into a compact horizontal strip. */
+  .library.collapsed .library-side {
+    padding: 10px 14px;
+    align-items: stretch;
+    border-bottom: 1px solid var(--separator);
+  }
+  .rail {
+    flex-direction: row;
+    gap: 6px;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .rail-item {
+    flex: none;
+  }
+  .rail-item.main .glyph {
+    --size: 40px;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--tone) 35%, transparent);
+  }
+  .rail-sep {
+    width: 1px;
+    height: 28px;
+    margin: 0 4px;
   }
   .library-side .hero,
   .library-side .empty-hero {
