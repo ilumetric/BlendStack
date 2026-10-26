@@ -184,8 +184,13 @@ export const ru: Record<MessageKey, string> = {
   "settings.upToDate": "Установлена последняя версия Blend Stack.",
   "settings.updateAvailable": "Доступна версия {version}.",
   "settings.download": "Скачать",
-  "settings.installUpdate": "Установить и перезапустить",
   "settings.installing": "Обновление…",
+  "settings.updateBanner": "Доступна Blend Stack {version}",
+  "settings.updateBanner.hint": "У вас {current}. Обновление займёт несколько секунд, приложение перезапустится само.",
+  "settings.updateBanner.hintManual": "У вас {current}. Скачайте новую версию со страницы релиза.",
+  "settings.updateNow": "Обновить",
+  "settings.restarting": "Перезапуск…",
+  "settings.checking": "Проверка…",
   "settings.source": "Исходный код",
   "settings.disclaimer": "Blend Stack — независимый проект с открытым исходным кодом, не связанный с Blender Foundation. Blender — зарегистрированная торговая марка Blender Foundation.",
 
@@ -206,6 +211,7 @@ export const ru: Record<MessageKey, string> = {
   "toast.moved": "Перенесено сборок: {count}",
   "toast.newBuilds": "Новых уведомлений: {count}",
   "toast.upToDate": "Новых сборок нет",
+  "toast.appUpdated": "Blend Stack обновлён до {version}",
   "toast.notBlend": "Открывать можно только файлы .blend",
 
   "fund.tooltip": "Поддержать Blender — Development Fund",

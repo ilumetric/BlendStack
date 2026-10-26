@@ -5,6 +5,7 @@ import { buildName } from "./lib/naming";
 import { resolveLanguage, translate } from "./i18n/core";
 import type {
   AppNotification,
+  AppUpdate,
   BuildList,
   DownloadTask,
   FileSection,
@@ -61,6 +62,15 @@ interface Store {
   chatUnread: number;
   /** Folder of the build that opens .blend files (Windows). */
   blendAssociation: string | null;
+  /** Newer Blend Stack release, once a check has found one. */
+  appUpdate: AppUpdate | null;
+  /** When GitHub was last asked (ms); 0 before the first check. */
+  appUpdateChecked: number;
+  appUpdateChecking: boolean;
+  /** Download progress 0…1 while the update installs. */
+  appUpdateProgress: number | null;
+  checkAppUpdate(manual?: boolean): Promise<void>;
+  installAppUpdate(): Promise<void>;
   associateBlendFiles(build: InstalledBuild): Promise<void>;
 
   boot(): Promise<void>;
@@ -146,6 +156,10 @@ export const useStore = create<Store>((set, get) => {
     focusBuild: null,
     chatUnread: 0,
     blendAssociation: null,
+    appUpdate: null,
+    appUpdateChecked: 0,
+    appUpdateChecking: false,
+    appUpdateProgress: null,
 
     async boot() {
       // React StrictMode mounts twice in development; listeners must register once.
@@ -161,6 +175,7 @@ export const useStore = create<Store>((set, get) => {
         downloads: Object.fromEntries(boot.downloads.map((d) => [d.id, d])),
         notifications: boot.notifications,
       });
+      if (boot.justUpdated) get().toast(tr("toast.appUpdated", { version: boot.system.appVersion }), "success");
 
       // Instant first paint from disk caches, then refresh in the background.
       const channels: RemoteChannel[] = ["stable", "daily", "experimental"];
@@ -186,6 +201,10 @@ export const useStore = create<Store>((set, get) => {
       void listen("files:opened", async () => get().queueFiles(await api.takePendingFiles()));
       void listen<number>("chat:unread", (e) => set({ chatUnread: e.payload }));
       void listen("chat:open", () => get().setTab("chat"));
+      void listen<AppUpdate>("app-update:available", (e) =>
+        set({ appUpdate: e.payload, appUpdateChecked: Date.now() }),
+      );
+      void listen<number>("app-update:progress", (e) => set({ appUpdateProgress: e.payload }));
 
       get().queueFiles(await api.takePendingFiles());
       void api.blendAssociation().then((dir) => set({ blendAssociation: dir }));
@@ -357,6 +376,31 @@ export const useStore = create<Store>((set, get) => {
         localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
       } catch {
         // ignore
+      }
+    },
+
+    async checkAppUpdate(manual = false) {
+      if (get().appUpdateChecking) return;
+      set({ appUpdateChecking: true });
+      try {
+        set({ appUpdate: await api.checkAppUpdate(), appUpdateChecked: Date.now() });
+      } catch (e) {
+        // A background check stays quiet: offline or rate-limited is not news.
+        if (manual) fail(e);
+      } finally {
+        set({ appUpdateChecking: false });
+      }
+    },
+
+    async installAppUpdate() {
+      if (get().appUpdateProgress !== null) return;
+      set({ appUpdateProgress: 0 });
+      try {
+        // On success the app restarts into the new version and never returns here.
+        await api.installAppUpdate();
+      } catch (e) {
+        set({ appUpdateProgress: null });
+        fail(e);
       }
     },
 

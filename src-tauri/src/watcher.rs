@@ -100,12 +100,13 @@ pub async fn check(app: &AppHandle) -> Vec<AppNotification> {
     if now - seen.app_checked > APP_CHECK_EVERY {
         seen.app_checked = now;
         if let Ok(Some(update)) = crate::updater::available(&state).await {
+            let _ = app.emit("app-update:available", &update);
             if seen.app_notified != update.version {
                 seen.app_notified = update.version.clone();
                 fresh.push(AppNotification::new(
                     "app",
                     format!("Blend Stack {} is available", update.version),
-                    "Open Settings → About to update".into(),
+                    "Open Settings to install it".into(),
                 ));
             }
         }

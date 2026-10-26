@@ -11,6 +11,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 
@@ -20,6 +21,11 @@ const WINDOWS_ASSET_SUFFIX: &str = "-windows-x64.zip";
 const CHECKSUMS_ASSET: &str = "SHA256SUMS.txt";
 /// Passed to the new process so it waits for the old one to quit first.
 pub const WAIT_FLAG: &str = "--wait-pid";
+
+/// An install is running; a second one would race it for the executable.
+static INSTALLING: AtomicBool = AtomicBool::new(false);
+/// This process was started by an update that just replaced the executable.
+pub static JUST_UPDATED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -116,6 +122,17 @@ pub async fn install_app_update(app: AppHandle, state: State<'_, AppState>) -> R
             "updates are installed from the release page on this platform",
         ));
     }
+    if INSTALLING.swap(true, Ordering::SeqCst) {
+        return Err(msg("the update is already being installed"));
+    }
+    let result = install(&app, &state).await;
+    if result.is_err() {
+        INSTALLING.store(false, Ordering::SeqCst);
+    }
+    result
+}
+
+async fn install(app: &AppHandle, state: &AppState) -> Result<()> {
     let release = latest_release(&state.http)
         .await?
         .ok_or_else(|| msg("no release found"))?;
@@ -136,7 +153,7 @@ pub async fn install_app_update(app: AppHandle, state: State<'_, AppState>) -> R
     let dir = state.paths.cache_dir.join("update");
     tokio::fs::create_dir_all(&dir).await?;
     let archive = dir.join(&asset.name);
-    let digest = download(&app, &state.http, &asset, &archive).await?;
+    let digest = download(app, &state.http, &asset, &archive).await?;
     if !digest.eq_ignore_ascii_case(&expected) {
         let _ = tokio::fs::remove_file(&archive).await;
         return Err(msg("checksum mismatch — the update was not installed"));
@@ -165,6 +182,7 @@ pub async fn install_app_update(app: AppHandle, state: State<'_, AppState>) -> R
         .arg(std::process::id().to_string())
         .spawn()
         .map_err(|e| msg(format!("updated, but could not restart: {e}")))?;
+    log::info!("updated to {}, restarting", release.tag_name);
     app.exit(0);
     Ok(())
 }
@@ -250,6 +268,7 @@ pub fn cleanup_previous() {
         .and_then(|i| args.get(i + 1))
         .and_then(|p| p.parse::<u32>().ok())
     {
+        JUST_UPDATED.store(true, Ordering::SeqCst);
         wait_for_exit(pid);
     }
     if let Ok(exe) = std::env::current_exe() {

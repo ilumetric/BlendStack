@@ -39,6 +39,8 @@ pub struct Bootstrap {
     pub installed: Vec<InstalledBuild>,
     pub downloads: Vec<DownloadTask>,
     pub notifications: Vec<AppNotification>,
+    /// Started right after Blend Stack updated itself.
+    pub just_updated: bool,
 }
 
 fn system_info(state: &AppState) -> SystemInfo {
@@ -68,6 +70,7 @@ pub fn get_bootstrap(state: State<'_, AppState>) -> Bootstrap {
         installed: state.installed(),
         downloads: state.downloads.list(),
         notifications: state.notifications.list(),
+        just_updated: crate::updater::JUST_UPDATED.load(std::sync::atomic::Ordering::SeqCst),
     }
 }
 

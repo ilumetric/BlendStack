@@ -155,6 +155,8 @@ export interface Bootstrap {
   installed: InstalledBuild[];
   downloads: DownloadTask[];
   notifications: AppNotification[];
+  /** Started right after Blend Stack updated itself. */
+  justUpdated: boolean;
 }
 
 export interface AppUpdate {

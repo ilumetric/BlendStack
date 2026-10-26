@@ -182,8 +182,13 @@ export const en = {
   "settings.upToDate": "Blend Stack is up to date.",
   "settings.updateAvailable": "Version {version} is available.",
   "settings.download": "Download",
-  "settings.installUpdate": "Install and Restart",
   "settings.installing": "Updating…",
+  "settings.updateBanner": "Blend Stack {version} is available",
+  "settings.updateBanner.hint": "You have {current}. The update takes a few seconds; the app restarts by itself.",
+  "settings.updateBanner.hintManual": "You have {current}. Download the new version from the release page.",
+  "settings.updateNow": "Update",
+  "settings.restarting": "Restarting…",
+  "settings.checking": "Checking…",
   "settings.source": "Source Code",
   "settings.disclaimer": "Blend Stack is an independent open-source project and is not affiliated with the Blender Foundation. Blender is a registered trademark of the Blender Foundation.",
 
@@ -204,6 +209,7 @@ export const en = {
   "toast.moved": "Builds moved: {count}",
   "toast.newBuilds": "{count} new notifications",
   "toast.upToDate": "No new builds",
+  "toast.appUpdated": "Blend Stack updated to {version}",
   "toast.notBlend": "Only .blend files can be opened",
 
   "fund.tooltip": "Support Blender — Development Fund",

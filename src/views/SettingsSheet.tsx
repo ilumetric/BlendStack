@@ -1,11 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ExternalLink, FolderOpen, X } from "lucide-react";
+import { ArrowUpCircle, ExternalLink, FolderOpen, X } from "lucide-react";
 import { useStore } from "../store";
 import { LANGUAGES, useT } from "../i18n";
 import { api, errorText } from "../lib/api";
-import type { AppUpdate, Settings } from "../lib/types";
+import type { Settings } from "../lib/types";
 import { Backdrop, confirmDialog } from "../components/Dialogs";
 import { Switch } from "../components/bits";
 import { Select } from "../components/Select";
@@ -13,6 +12,8 @@ import { revealLabel } from "./buildMenu";
 import logo from "../assets/logo.svg";
 
 const INTERVALS = [0, 15, 60, 180, 720, 1440] as const;
+/** Opening Settings re-asks GitHub at most this often. */
+const UPDATE_RECHECK_MS = 10 * 60 * 1000;
 
 function Row({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children?: ReactNode }) {
   return (
@@ -41,13 +42,15 @@ export function SettingsSheet() {
   const system = useStore((s) => s.system);
   const patch = useStore((s) => s.patchSettings);
   const close = () => useStore.getState().setSettingsOpen(false);
-  const [update, setUpdate] = useState<AppUpdate | null | "checking" | "none">(null);
+  const update = useStore((s) => s.appUpdate);
+  const updateChecked = useStore((s) => s.appUpdateChecked);
+  const checking = useStore((s) => s.appUpdateChecking);
+  const installing = useStore((s) => s.appUpdateProgress);
   const [args, setArgs] = useState(settings?.globalArgs ?? "");
-  const [installing, setInstalling] = useState<number | null>(null);
 
   useEffect(() => {
-    const un = listen<number>("app-update:progress", (e) => setInstalling(e.payload));
-    return () => void un.then((f) => f());
+    const s = useStore.getState();
+    if (Date.now() - s.appUpdateChecked > UPDATE_RECHECK_MS) void s.checkAppUpdate();
   }, []);
 
   if (!settings || !system) return null;
@@ -86,25 +89,25 @@ export function SettingsSheet() {
     if (typeof dir === "string" && dir !== system.library) await switchLibrary(dir);
   };
 
-  const installUpdate = async () => {
-    setInstalling(0);
-    try {
-      await api.installAppUpdate();
-    } catch (e) {
-      setInstalling(null);
-      useStore.getState().toast(errorText(e), "error");
-    }
-  };
+  const installUpdate = () => void useStore.getState().installAppUpdate();
+  const checkUpdate = () => void useStore.getState().checkAppUpdate(true);
 
-  const checkUpdate = async () => {
-    setUpdate("checking");
-    try {
-      setUpdate((await api.checkAppUpdate()) ?? "none");
-    } catch (e) {
-      setUpdate(null);
-      useStore.getState().toast(errorText(e), "error");
-    }
-  };
+  const updateButton = update ? (
+    update.canInstall ? (
+      <button className="btn primary" onClick={installUpdate} disabled={installing !== null}>
+        {installing === null
+          ? tr("settings.updateNow")
+          : installing >= 1
+            ? tr("settings.restarting")
+            : `${tr("settings.installing")} ${Math.round(installing * 100)}%`}
+      </button>
+    ) : (
+      <button className="btn primary" onClick={() => api.openUrl(update.url)}>
+        {tr("settings.download")}
+        <ExternalLink size={12} />
+      </button>
+    )
+  ) : null;
 
   return (
     <Backdrop onClose={close}>
@@ -116,6 +119,25 @@ export function SettingsSheet() {
           </button>
         </div>
         <div className="sheet-body">
+          {update && (
+            <div className="update-banner">
+              <ArrowUpCircle size={22} className="update-banner-icon" />
+              <div className="update-banner-text">
+                <div className="update-banner-title">{tr("settings.updateBanner", { version: update.version })}</div>
+                <div className="muted">
+                  {tr(update.canInstall ? "settings.updateBanner.hint" : "settings.updateBanner.hintManual", {
+                    current: system.appVersion,
+                  })}
+                </div>
+                {installing !== null && (
+                  <div className="update-progress">
+                    <div style={{ width: `${Math.round(installing * 100)}%` }} />
+                  </div>
+                )}
+              </div>
+              {updateButton}
+            </div>
+          )}
           <Group title={tr("settings.appearance")}>
             <Row label={tr("settings.theme")}>
               <Select<Settings["theme"]>
@@ -242,29 +264,19 @@ export function SettingsSheet() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>Blend Stack</div>
                 <div className="muted">{tr("settings.version", { version: system.appVersion })}</div>
-                {update === "none" && <div className="muted">{tr("settings.upToDate")}</div>}
-                {update && typeof update === "object" && (
+                {!update && updateChecked > 0 && !checking && (
+                  <div className="muted">{tr("settings.upToDate")}</div>
+                )}
+                {update && (
                   <div style={{ color: "var(--accent)", fontWeight: 600 }}>
                     {tr("settings.updateAvailable", { version: update.version })}
                   </div>
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                {update && typeof update === "object" ? (
-                  update.canInstall ? (
-                    <button className="btn primary" onClick={installUpdate} disabled={installing !== null}>
-                      {installing === null
-                        ? tr("settings.installUpdate")
-                        : `${tr("settings.installing")} ${Math.round(installing * 100)}%`}
-                    </button>
-                  ) : (
-                    <button className="btn primary" onClick={() => api.openUrl(update.url)}>
-                      {tr("settings.download")}
-                    </button>
-                  )
-                ) : (
-                  <button className="btn" onClick={checkUpdate} disabled={update === "checking"}>
-                    {tr("settings.checkUpdate")}
+                {updateButton ?? (
+                  <button className="btn" onClick={checkUpdate} disabled={checking}>
+                    {checking ? tr("settings.checking") : tr("settings.checkUpdate")}
                   </button>
                 )}
                 <button className="btn plain" onClick={() => api.openUrl(system.repository)}>
