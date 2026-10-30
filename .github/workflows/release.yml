@@ -25,7 +25,8 @@ concurrency:
 jobs:
   version:
     name: Version
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest is moving to a new image.
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.v.outputs.version }}
       tag: ${{ steps.v.outputs.tag }}
@@ -131,7 +132,7 @@ jobs:
   publish:
     name: Publish
     needs: [version, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -145,8 +146,21 @@ jobs:
           TAG: ${{ needs.version.outputs.tag }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          gh release create "$TAG" dist/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Blend Stack $VERSION" \
-            --generate-notes \
-            --verify-tag
+          gh --version
+          # GitHub's API fails now and then; a retry (or a re-run of this job)
+          # finishes the release an earlier attempt left as a draft.
+          for attempt in 1 2 3; do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber &&
+                gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false && exit 0
+            else
+              gh release create "$TAG" dist/* \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "Blend Stack $VERSION" \
+                --generate-notes \
+                --verify-tag && exit 0
+            fi
+            echo "::warning::publishing failed (attempt $attempt)"
+            sleep $((attempt * 20))
+          done
+          exit 1
