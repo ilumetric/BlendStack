@@ -1,6 +1,6 @@
 [package]
 name = "blendstack"
-version = "0.1.12"
+version = "0.1.13"
 description = "A fast, modern launcher for official Blender builds"
 authors = ["Max Derksen"]
 license = "MIT"
