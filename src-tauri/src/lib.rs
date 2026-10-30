@@ -19,7 +19,7 @@ mod updater;
 mod watcher;
 mod window;
 
-use settings::{read_json, AppPaths, Settings};
+use settings::{read_json, write_json, AppPaths, Settings};
 use state::AppState;
 use tauri::{Emitter, Manager, RunEvent, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
@@ -35,6 +35,61 @@ fn blend_files<I: IntoIterator<Item = String>>(args: I) -> Vec<String> {
         .skip(1)
         .filter(|a| a.to_ascii_lowercase().ends_with(".blend") && std::path::Path::new(a).is_file())
         .collect()
+}
+
+/// Whether Blend Stack already runs; arguments then go to it through the
+/// single-instance plugin, which holds this mutex while an instance runs.
+fn already_running() -> bool {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Threading::OpenMutexW;
+        const SYNCHRONIZE: u32 = 0x0010_0000;
+        let name: Vec<u16> = format!("{IDENTIFIER}-sim")
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let handle = unsafe { OpenMutexW(SYNCHRONIZE, 0, name.as_ptr()) };
+        if handle.is_null() {
+            return false;
+        }
+        unsafe { CloseHandle(handle) };
+        true
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+/// Opens .blend files in the build of the Blender version that saved them
+/// before any window exists, so a double-clicked file starts Blender right
+/// away. Returns the files the user has to pick a build for.
+fn open_without_ui(paths: &AppPaths, files: Vec<String>) -> Vec<String> {
+    let mut settings: Settings = read_json(&paths.settings_file());
+    let installed = library::scan(&paths.library(&settings), &settings.external_builds);
+    let mut rest = Vec::new();
+    let mut launched = Vec::new();
+    for file in files {
+        let Some(build) =
+            launch::build_for_file(std::path::Path::new(&file), &installed, &settings)
+        else {
+            rest.push(file);
+            continue;
+        };
+        assoc::on_launch(build);
+        match launch::launch(build, &settings, Some(&file)) {
+            Ok(()) => launched.push(build.id.clone()),
+            Err(_) => rest.push(file),
+        }
+    }
+    if !launched.is_empty() {
+        for id in launched {
+            settings.last_launched.insert(id, model::now());
+        }
+        let _ = write_json(&paths.settings_file(), &settings);
+    }
+    rest
 }
 
 /// Process start, for startup timing in the log.
@@ -55,12 +110,26 @@ pub fn run() {
     }
     updater::cleanup_previous();
 
+    let mut files = blend_files(std::env::args());
+    if !files.is_empty() && !already_running() {
+        files = open_without_ui(&paths, files);
+        if files.is_empty() {
+            return;
+        }
+    }
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             let files = blend_files(argv);
-            if !files.is_empty() {
+            let given = !files.is_empty();
+            let rest = commands::open_files(app, files);
+            // A file that opened in Blender right away needs no window.
+            if given && rest.is_empty() {
+                return;
+            }
+            if !rest.is_empty() {
                 let state = app.state::<AppState>();
-                state.pending_files.lock().unwrap().extend(files);
+                state.pending_files.lock().unwrap().extend(rest);
                 let _ = app.emit("files:opened", ());
             }
             tray::show_main(app);
@@ -90,11 +159,7 @@ pub fn run() {
 
             let hidden = launched_hidden && settings.start_minimized;
             let state = AppState::new(paths.clone(), settings.clone(), hidden)?;
-            state
-                .pending_files
-                .lock()
-                .unwrap()
-                .extend(blend_files(std::env::args()));
+            state.pending_files.lock().unwrap().extend(files);
             app.manage(state);
 
             // The window is created here rather than from the config so its
@@ -176,7 +241,10 @@ pub fn run() {
             commands::check_now,
             commands::take_pending_files,
             assoc::register_blend_files,
-            assoc::blend_association,
+            assoc::blend_handler,
+            assoc::set_blend_handler,
+            assoc::file_series,
+            assoc::open_default_apps,
             chat::chat_show,
             chat::chat_hide,
             updater::check_app_update,

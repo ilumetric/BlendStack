@@ -255,7 +255,8 @@ function RecentCard({
   const loadThumb = useStore((s) => s.loadThumb);
   const launch = useStore((s) => s.launch);
   const labels = useStore((s) => s.settings?.labels);
-  const target = bestForSeries(builds, file.series, fallback);
+  const defaultBuild = useStore((s) => s.settings?.defaultBuild ?? null);
+  const target = bestForSeries(builds, file.series, fallback, defaultBuild);
 
   useEffect(() => {
     if (thumb === undefined) loadThumb(file.path);

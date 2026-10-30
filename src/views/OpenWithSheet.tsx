@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { FileBox, Play } from "lucide-react";
 import { useStore } from "../store";
 import { useT } from "../i18n";
-import { bestForSeries, resolveDefault, sortInstalled } from "../lib/builds";
+import { api } from "../lib/api";
+import { bestForSeries, closestNewer, resolveDefault, series, sortInstalled } from "../lib/builds";
 import { buildName, cycleLabel } from "../lib/naming";
 import { Backdrop } from "../components/Dialogs";
 import { Glyph } from "../components/bits";
@@ -18,9 +19,22 @@ export function OpenWithSheet() {
   const file = files[0];
 
   const builds = useMemo(() => sortInstalled(installed), [installed]);
+  // Read from the file itself; the Library lists know it for their files already.
+  const [savedWith, setSavedWith] = useState<string | null>(null);
+  useEffect(() => {
+    setSavedWith(null);
+    if (file) void api.fileSeries(file).then(setSavedWith, () => {});
+  }, [file]);
   const fileSeries =
-    [...(lists.recent ?? []), ...(lists.recovery ?? []), ...(lists.backups ?? [])].find((r) => r.path === file)?.series ?? "";
-  const suggested = bestForSeries(installed, fileSeries, resolveDefault(installed, settings));
+    savedWith ??
+    [...(lists.recent ?? []), ...(lists.recovery ?? []), ...(lists.backups ?? [])].find((r) => r.path === file)?.series ??
+    "";
+  const seriesInstalled = !!fileSeries && installed.some((b) => series(b.version) === fileSeries);
+  const fallback = resolveDefault(installed, settings);
+  // A file from a version that isn't installed opens best in the closest newer one.
+  const suggested = seriesInstalled
+    ? bestForSeries(installed, fileSeries, fallback, settings?.defaultBuild ?? null)
+    : ((fileSeries && closestNewer(installed, fileSeries)) || fallback);
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => setSelected(suggested?.id ?? null), [file, suggested?.id]);
@@ -44,7 +58,9 @@ export function OpenWithSheet() {
               {tr("openWith.title", { name })}
             </h2>
             <div className="muted" style={{ fontSize: 12 }}>
-              {fileSeries ? tr("openWith.saved", { series: fileSeries }) : tr("openWith.subtitle")}
+              {fileSeries
+                ? tr(seriesInstalled ? "openWith.saved" : "openWith.missing", { series: fileSeries })
+                : tr("openWith.subtitle")}
             </div>
           </div>
         </div>

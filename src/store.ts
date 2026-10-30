@@ -6,6 +6,7 @@ import { resolveLanguage, translate } from "./i18n/core";
 import type {
   AppNotification,
   AppUpdate,
+  BlendHandler,
   BuildList,
   DownloadTask,
   FileSection,
@@ -60,8 +61,8 @@ interface Store {
   prevSeen: Record<SeenKey, number>;
   focusBuild: string | null;
   chatUnread: number;
-  /** Folder of the build that opens .blend files (Windows). */
-  blendAssociation: string | null;
+  /** Blend Stack and .blend files (Windows). */
+  blendHandler: BlendHandler;
   /** Newer Blend Stack release, once a check has found one. */
   appUpdate: AppUpdate | null;
   /** When GitHub was last asked (ms); 0 before the first check. */
@@ -72,6 +73,7 @@ interface Store {
   checkAppUpdate(manual?: boolean): Promise<void>;
   installAppUpdate(): Promise<void>;
   associateBlendFiles(build: InstalledBuild): Promise<void>;
+  setBlendHandler(enabled: boolean): Promise<void>;
 
   boot(): Promise<void>;
   setTab(tab: Tab): void;
@@ -155,7 +157,7 @@ export const useStore = create<Store>((set, get) => {
     prevSeen: loadSeen(),
     focusBuild: null,
     chatUnread: 0,
-    blendAssociation: null,
+    blendHandler: { registered: false, active: false },
     appUpdate: null,
     appUpdateChecked: 0,
     appUpdateChecking: false,
@@ -207,8 +209,11 @@ export const useStore = create<Store>((set, get) => {
       void listen<number>("app-update:progress", (e) => set({ appUpdateProgress: e.payload }));
 
       get().queueFiles(await api.takePendingFiles());
-      void api.blendAssociation().then((dir) => set({ blendAssociation: dir }));
-      void listen("association:changed", async () => set({ blendAssociation: await api.blendAssociation() }));
+      const refreshHandler = async () => set({ blendHandler: await api.blendHandler() });
+      void refreshHandler();
+      void listen("association:changed", refreshHandler);
+      // The user may confirm Blend Stack for .blend files in Windows meanwhile.
+      window.addEventListener("focus", () => void refreshHandler());
       void get().loadBuilds("stable");
       void get().loadBuilds("daily");
       void get().loadRecent();
@@ -347,10 +352,26 @@ export const useStore = create<Store>((set, get) => {
     async associateBlendFiles(build) {
       try {
         await api.registerBlendFiles(build.id);
-        set({ blendAssociation: await api.blendAssociation() });
         get().toast(tr("toast.associated", { name: nameOf(build) }), "success");
       } catch (e) {
         fail(e);
+      }
+    },
+
+    async setBlendHandler(enabled) {
+      try {
+        const handler = await api.setBlendHandler(enabled);
+        set({ blendHandler: handler });
+        if (handler.active) get().toast(tr("toast.blendHandler"), "success");
+        else if (handler.registered)
+          get().toast(tr("toast.blendHandler.confirm"), "info", {
+            label: tr("settings.defaultApps"),
+            run: () => void api.openDefaultApps(),
+          });
+      } catch (e) {
+        fail(e);
+        const handler = await api.blendHandler().catch(() => null);
+        if (handler) set({ blendHandler: handler });
       }
     },
 

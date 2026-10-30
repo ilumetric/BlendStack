@@ -38,6 +38,8 @@ Get them from [Releases](https://github.com/ilumetric/BlendStack/releases). On W
 - **Updates in place** — daily and experimental builds show an *Update* button when a newer build of the same line appears; the old build is replaced and its settings carried over.
 - **Recent files** — merged from every Blender version's history, with the thumbnails embedded in the `.blend` files. Each file opens in the Blender version that saved it.
 - **Drag & drop** `.blend` files onto the window to pick which Blender opens them.
+- **Double-click any `.blend`** (Windows, opt-in) — Blend Stack opens it in the Blender version that saved it, without showing its window; it asks only when that version isn't installed.
+- **Taskbar icon that survives updates** — when a build is updated or removed, the taskbar shortcuts Windows keeps for Blender are pointed at an installed build of the same series, so Blender's button never turns blank.
 - **Notifications** — a background check (configurable interval) for new releases, new daily versions and updates to builds you have installed, delivered as native notifications and in the in-app notification center.
 - **News** — the latest posts from blender.org and the Blender Developers Blog.
 - **System tray** quick-launch menu, start at login, close-to-tray.
@@ -102,7 +104,7 @@ Blend Stack/
 └─ Builds/      stable/ daily/ experimental/
 ```
 
-Copy or move the folder and nothing is left behind. The only thing written elsewhere is the optional *Open at login* entry. On macOS (app bundle) and for AppImages the standard per-user folders are used (`~/Library/Application Support/io.github.ilumetric.blendstack`, `~/.local/share/io.github.ilumetric.blendstack`).
+Copy or move the folder and nothing is left behind. The only things written elsewhere are the optional *Open at login* entry and, when you turn it on, the `.blend` file type in the registry. On macOS (app bundle) and for AppImages the standard per-user folders are used (`~/Library/Application Support/io.github.ilumetric.blendstack`, `~/.local/share/io.github.ilumetric.blendstack`).
 
 The builds folder can be changed in Settings — installed builds move along with it. It uses the same `stable` / `daily` / `experimental` layout as Blender Launcher, so an existing Blender Launcher library can be opened directly. Your Blender preferences and add-ons are untouched: every build uses Blender's normal configuration folder.
 

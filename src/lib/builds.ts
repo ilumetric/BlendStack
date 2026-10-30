@@ -120,12 +120,24 @@ export function resolveDefault(installed: InstalledBuild[], settings: Settings |
   return sortInstalled(installed.filter((b) => b.channel === "stable"))[0] ?? sortInstalled(installed)[0];
 }
 
-/** Best build to open a file saved by Blender `fileSeries` with. */
+/**
+ * Best build to open a file saved by Blender `fileSeries` with: the default
+ * build when it is of that series, then stable builds, then the newest.
+ * Matches `best_in_series` in launch.rs.
+ */
 export function bestForSeries(
   installed: InstalledBuild[],
   fileSeries: string,
   fallback: InstalledBuild | null,
+  defaultBuild: string | null = null,
 ): InstalledBuild | null {
   const same = sortInstalled(installed.filter((b) => series(b.version) === fileSeries));
-  return same.find((b) => b.channel === "stable") ?? same[0] ?? fallback;
+  return same.find((b) => b.id === defaultBuild) ?? same.find((b) => b.channel === "stable") ?? same[0] ?? fallback;
+}
+
+/** The closest installed version newer than `fileSeries`, which can read the file. */
+export function closestNewer(installed: InstalledBuild[], fileSeries: string): InstalledBuild | null {
+  const newer = sortInstalled(installed.filter((b) => compareVersions(series(b.version), fileSeries) > 0));
+  const oldest = newer[newer.length - 1];
+  return oldest ? bestForSeries(newer, series(oldest.version), null) : null;
 }

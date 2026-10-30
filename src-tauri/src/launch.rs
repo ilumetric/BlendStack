@@ -1,7 +1,7 @@
 //! Starting Blender.
 
 use crate::error::{msg, Result};
-use crate::model::InstalledBuild;
+use crate::model::{cycle_rank, series, Channel, InstalledBuild, Version};
 use crate::settings::Settings;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -84,6 +84,43 @@ pub fn launch(build: &InstalledBuild, settings: &Settings, file: Option<&str>) -
     Ok(())
 }
 
+/// The best installed build of a series: `preferred` when it is one of
+/// them, otherwise stable builds first, then the newest.
+pub fn best_in_series<'a>(
+    installed: &'a [InstalledBuild],
+    series_name: &str,
+    preferred: Option<&str>,
+) -> Option<&'a InstalledBuild> {
+    let same = installed
+        .iter()
+        .filter(|b| series(&b.version) == series_name);
+    if let Some(p) = preferred.and_then(|id| same.clone().find(|b| b.id == id)) {
+        return Some(p);
+    }
+    same.max_by_key(|b| {
+        (
+            b.channel == Channel::Stable,
+            Version::parse(&b.version),
+            cycle_rank(&b.release_cycle),
+            b.date,
+        )
+    })
+}
+
+/// The build that opens a file without asking: one of the Blender version
+/// that saved it. `None` asks the user (no such build, unreadable file).
+pub fn build_for_file<'a>(
+    file: &Path,
+    installed: &'a [InstalledBuild],
+    settings: &Settings,
+) -> Option<&'a InstalledBuild> {
+    if settings.ask_for_files {
+        return None;
+    }
+    let saved_with = crate::recent::blend_series(file)?;
+    best_in_series(installed, &saved_with, settings.default_build.as_deref())
+}
+
 /// On Windows `blender-launcher.exe` starts Blender without a console window.
 fn program(exe: &Path, settings: &Settings) -> std::path::PathBuf {
     if cfg!(windows) && !settings.show_console {
@@ -97,7 +134,8 @@ fn program(exe: &Path, settings: &Settings) -> std::path::PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::split_args;
+    use super::{best_in_series, split_args};
+    use crate::model::InstalledBuild;
 
     #[test]
     fn splits_quoted_args() {
@@ -106,5 +144,30 @@ mod tests {
             vec!["--factory-startup", "-p", "0", "0", "a b", ""]
         );
         assert!(split_args("   ").is_empty());
+    }
+
+    fn build(id: &str, channel: &str, version: &str, cycle: &str) -> InstalledBuild {
+        serde_json::from_value(serde_json::json!({
+            "id": id, "channel": channel, "version": version, "releaseCycle": cycle,
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn picks_the_best_build_of_a_series() {
+        let installed = [
+            build("stable/5.1.1", "stable", "5.1.1", "stable"),
+            build("daily/5.2.4", "daily", "5.2.4", "candidate"),
+            build("stable/5.2.2", "stable", "5.2.2", "stable"),
+            build("stable/5.2.3", "stable", "5.2.3", "stable"),
+        ];
+        let pick = |series, preferred| {
+            best_in_series(&installed, series, preferred).map(|b| b.id.as_str())
+        };
+        assert_eq!(pick("5.2", None), Some("stable/5.2.3"));
+        assert_eq!(pick("5.2", Some("daily/5.2.4")), Some("daily/5.2.4"));
+        // A default build of another series doesn't count.
+        assert_eq!(pick("5.2", Some("stable/5.1.1")), Some("stable/5.2.3"));
+        assert_eq!(pick("4.2", None), None);
     }
 }

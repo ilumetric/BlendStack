@@ -39,6 +39,9 @@ pub struct Settings {
     /// Windows: start Blender with its console window.
     pub show_console: bool,
     pub global_args: String,
+    /// .blend files opened from outside always ask which build to use,
+    /// instead of opening in the version that saved them.
+    pub ask_for_files: bool,
 
     pub default_build: Option<String>,
     pub favorites: Vec<String>,
@@ -73,6 +76,7 @@ impl Default for Settings {
             replace_on_update: true,
             show_console: false,
             global_args: String::new(),
+            ask_for_files: false,
             default_build: None,
             favorites: Vec::new(),
             labels: HashMap::new(),

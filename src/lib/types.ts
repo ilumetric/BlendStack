@@ -17,6 +17,14 @@ export interface RemoteBuild {
   lts: boolean;
 }
 
+/** Blend Stack and .blend files on Windows. */
+export interface BlendHandler {
+  /** Registered for .blend files. */
+  registered: boolean;
+  /** Windows opens .blend files with it: the user confirmed it in Windows. */
+  active: boolean;
+}
+
 export interface InstalledBuild {
   id: string;
   path: string;
@@ -128,6 +136,7 @@ export interface Settings {
   replaceOnUpdate: boolean;
   showConsole: boolean;
   globalArgs: string;
+  askForFiles: boolean;
   defaultBuild: string | null;
   favorites: string[];
   labels: Record<string, string>;

@@ -46,6 +46,7 @@ export function SettingsSheet() {
   const updateChecked = useStore((s) => s.appUpdateChecked);
   const checking = useStore((s) => s.appUpdateChecking);
   const installing = useStore((s) => s.appUpdateProgress);
+  const blendHandler = useStore((s) => s.blendHandler);
   const [args, setArgs] = useState(settings?.globalArgs ?? "");
 
   useEffect(() => {
@@ -256,6 +257,31 @@ export function SettingsSheet() {
               />
             </Row>
             {system.os === "windows" && <Row label={tr("settings.showConsole")}>{toggle("showConsole")}</Row>}
+            {system.os === "windows" && (
+              <Row
+                label={tr("settings.blendHandler")}
+                hint={
+                  blendHandler.registered && !blendHandler.active
+                    ? tr("settings.blendHandler.confirm")
+                    : tr("settings.blendHandler.hint")
+                }
+              >
+                {blendHandler.registered && !blendHandler.active && (
+                  <button className="btn" onClick={() => void api.openDefaultApps().catch(() => {})}>
+                    {tr("settings.defaultApps")}
+                  </button>
+                )}
+                <Switch
+                  on={blendHandler.registered}
+                  onChange={(v) => void useStore.getState().setBlendHandler(v)}
+                />
+              </Row>
+            )}
+            {system.os === "windows" && blendHandler.registered && (
+              <Row label={tr("settings.askForFiles")} hint={tr("settings.askForFiles.hint")}>
+                {toggle("askForFiles")}
+              </Row>
+            )}
           </Group>
 
           <Group title={tr("settings.about")}>

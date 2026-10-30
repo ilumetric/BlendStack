@@ -207,6 +207,8 @@ pub fn launch_by_id(app: &AppHandle, id: &str, file: Option<&str>) -> Result<()>
         .find_installed(id)
         .ok_or_else(|| msg("build not found"))?;
     let settings = state.settings();
+    let icon_build = build.clone();
+    std::thread::spawn(move || crate::assoc::on_launch(&icon_build));
     crate::launch::launch(&build, &settings, file)?;
     let saved = state.update_settings(|s| {
         s.last_launched.insert(build.id.clone(), now());
@@ -223,6 +225,28 @@ pub fn launch_by_id(app: &AppHandle, id: &str, file: Option<&str>) -> Result<()>
         }
     }
     Ok(())
+}
+
+/// Opens .blend files given by the system in the build of the Blender
+/// version that saved them. Returns the files the user has to pick a build for.
+pub fn open_files(app: &AppHandle, files: Vec<String>) -> Vec<String> {
+    let state = app.state::<AppState>();
+    let settings = state.settings();
+    let installed = state.installed();
+    let mut rest = Vec::new();
+    for file in files {
+        let opened = crate::launch::build_for_file(Path::new(&file), &installed, &settings)
+            .map(|b| launch_by_id(app, &b.id, Some(&file)));
+        match opened {
+            Some(Ok(())) => {}
+            Some(Err(e)) => {
+                log::warn!("could not open {file}: {e}");
+                rest.push(file);
+            }
+            None => rest.push(file),
+        }
+    }
+    rest
 }
 
 #[tauri::command]

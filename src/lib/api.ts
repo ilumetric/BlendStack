@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AppNotification,
   AppUpdate,
+  BlendHandler,
   Bootstrap,
   BuildList,
   DownloadTask,
@@ -52,7 +53,10 @@ export const api = {
   checkAppUpdate: () => invoke<AppUpdate | null>("check_app_update"),
   installAppUpdate: () => invoke<void>("install_app_update"),
   registerBlendFiles: (id: string) => invoke<void>("register_blend_files", { id }),
-  blendAssociation: () => invoke<string | null>("blend_association"),
+  blendHandler: () => invoke<BlendHandler>("blend_handler"),
+  setBlendHandler: (enabled: boolean) => invoke<BlendHandler>("set_blend_handler", { enabled }),
+  openDefaultApps: () => invoke<void>("open_default_apps"),
+  fileSeries: (path: string) => invoke<string | null>("file_series", { path }),
 };
 
 export function errorText(e: unknown): string {

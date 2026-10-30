@@ -125,6 +125,12 @@ impl Version {
     }
 }
 
+/// `major.minor` of a version string, e.g. `5.2` for `5.2.3`.
+pub fn series(version: &str) -> String {
+    let v = Version::parse(version);
+    format!("{}.{}", v.major, v.minor)
+}
+
 pub fn cycle_rank(cycle: &str) -> u8 {
     match cycle {
         "stable" => 4,

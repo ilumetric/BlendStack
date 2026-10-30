@@ -205,7 +205,7 @@ pub fn backups(limit: usize) -> Vec<RecentFile> {
 }
 
 /// Blender series that wrote a .blend file, read from its header.
-fn blend_series(path: &Path) -> Option<String> {
+pub fn blend_series(path: &Path) -> Option<String> {
     let mut head = [0u8; 17];
     open_blend(path).ok()?.read_exact(&mut head).ok()?;
     if &head[..7] != b"BLENDER" {

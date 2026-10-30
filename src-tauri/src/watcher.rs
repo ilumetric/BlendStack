@@ -1,6 +1,6 @@
 //! Background check for new builds and the notifications it produces.
 
-use crate::model::{Channel, InstalledBuild, RemoteBuild, Version};
+use crate::model::{series, Channel, InstalledBuild, RemoteBuild};
 use crate::notifications::AppNotification;
 use crate::settings::{read_json, write_json};
 use crate::state::AppState;
@@ -116,11 +116,6 @@ pub async fn check(app: &AppHandle) -> Vec<AppNotification> {
     let _ = write_json(&seen_file, &seen);
     state.notifications.push(app, fresh.clone(), true);
     fresh
-}
-
-fn series(version: &str) -> String {
-    let v = Version::parse(version);
-    format!("{}.{}", v.major, v.minor)
 }
 
 /// Keys that identify "something new" in a channel.
