@@ -181,7 +181,7 @@ mod win {
     const REGISTERED_APPS: &str = r"Software\RegisteredApplications";
     pub const DEFAULT_APPS_URL: &str = "ms-settings:defaultapps?registeredAppUser=Blend%20Stack";
     /// Resource id of the .blend file icon in Blend Stack's executable (see build.rs).
-    const FILE_ICON: u16 = 2;
+    const FILE_ICON: u16 = 32513;
     /// Blender's Explorer thumbnail handler, registered by `blender --register`.
     const THUMBNAILER: &str = r"CLSID\{D45F043D-F17F-4e8a-8435-70971D9FA46D}\InProcServer32";
 
