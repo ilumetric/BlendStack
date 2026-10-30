@@ -111,6 +111,10 @@ pub fn run() {
     updater::cleanup_previous();
 
     let mut files = blend_files(std::env::args());
+    if !files.is_empty() {
+        // A file from Explorer may be the first one after "Open with → Always".
+        assoc::adopt_file_type();
+    }
     if !files.is_empty() && !already_running() {
         files = open_without_ui(&paths, files);
         if files.is_empty() {

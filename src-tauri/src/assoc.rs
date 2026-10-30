@@ -149,6 +149,16 @@ pub fn repair(installed: &[InstalledBuild]) -> bool {
     }
 }
 
+/// When .blend files open with Blend Stack through a file type Windows made
+/// itself (picked in "Open with → Always"), gives that type the .blend icon:
+/// without one Explorer shows the app's icon on the files.
+pub fn adopt_file_type() {
+    #[cfg(windows)]
+    if win::adopt_file_type() {
+        win::notify_shell();
+    }
+}
+
 /// Runs [`repair`] off the UI thread and tells the UI when it changed anything.
 pub fn repair_in_background(app: &AppHandle) {
     let app = app.clone();
@@ -204,17 +214,23 @@ mod win {
 
     /// Whether Windows runs this executable for .blend files, as Explorer resolves it.
     fn opens_blend_files() -> bool {
-        use windows_sys::Win32::UI::Shell::{AssocQueryStringW, ASSOCF_NONE, ASSOCSTR_EXECUTABLE};
-        let Some(exe) = own_exe() else {
+        use windows_sys::Win32::UI::Shell::ASSOCSTR_EXECUTABLE;
+        let (Some(exe), Some(runs)) = (own_exe(), resolve(ASSOCSTR_EXECUTABLE)) else {
             return false;
         };
+        same_file(Path::new(&runs), &exe)
+    }
+
+    /// What Explorer resolves for opening .blend files.
+    fn resolve(what: windows_sys::Win32::UI::Shell::ASSOCSTR) -> Option<String> {
+        use windows_sys::Win32::UI::Shell::{AssocQueryStringW, ASSOCF_NONE};
         let mut buf = [0u16; 1024];
         let mut len = buf.len() as u32;
         let (ext, verb) = (reg::wide(".blend"), reg::wide("open"));
         let hr = unsafe {
             AssocQueryStringW(
                 ASSOCF_NONE,
-                ASSOCSTR_EXECUTABLE,
+                what,
                 ext.as_ptr(),
                 verb.as_ptr(),
                 buf.as_mut_ptr(),
@@ -222,7 +238,33 @@ mod win {
             )
         };
         let end = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
-        hr == 0 && same_file(Path::new(&String::from_utf16_lossy(&buf[..end])), &exe)
+        (hr == 0 && end > 0).then(|| String::from_utf16_lossy(&buf[..end]))
+    }
+
+    /// See [`super::adopt_file_type`]: `blend_auto_file` or `Applications\Blend Stack.exe`.
+    /// Returns true when it changed anything.
+    pub fn adopt_file_type() -> bool {
+        use windows_sys::Win32::UI::Shell::ASSOCSTR_PROGID;
+        let (Some(exe), Some(prog_id)) = (own_exe(), resolve(ASSOCSTR_PROGID)) else {
+            return false;
+        };
+        let key = class(&prog_id);
+        let runs_us = reg::read(&format!(r"{key}\shell\open\command"), None)
+            .and_then(|c| program(&c))
+            .is_some_and(|p| same_file(&p, &exe));
+        let icon_key = format!(r"{key}\DefaultIcon");
+        let wanted = file_icon(&exe);
+        if prog_id == PROG_ID
+            || !runs_us
+            || reg::read(&icon_key, None).as_deref() == Some(wanted.as_str())
+        {
+            return false;
+        }
+        let ok = reg::write(&icon_key, None, &wanted).is_ok();
+        if ok {
+            log::info!("gave the .blend icon to file type {prog_id}");
+        }
+        ok
     }
 
     /// `Applications\Blend Stack.exe`: what "Open with" stores for the exe itself.
@@ -333,6 +375,7 @@ mod win {
                 }
             }
         }
+        changed |= adopt_file_type();
 
         // Blender's own file types and taskbar shortcuts, one per series.
         let mut targets: Vec<(String, PathBuf)> = Vec::new();
