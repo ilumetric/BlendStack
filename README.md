@@ -38,7 +38,7 @@ Get them from [Releases](https://github.com/ilumetric/BlendStack/releases). On W
 - **Updates in place** — daily and experimental builds show an *Update* button when a newer build of the same line appears; the old build is replaced and its settings carried over.
 - **Recent files** — merged from every Blender version's history, with the thumbnails embedded in the `.blend` files. Each file opens in the Blender version that saved it.
 - **Drag & drop** `.blend` files onto the window to pick which Blender opens them.
-- **Double-click any `.blend`** (Windows, opt-in) — Blend Stack opens it in the Blender version that saved it, without showing its window; it asks only when that version isn't installed.
+- **Double-click any `.blend`** (Windows, opt-in) — Blend Stack opens it in the Blender version that saved it, without showing its window; it asks only when that version isn't installed. The files get their own icon, a page in the style of the version tiles.
 - **Taskbar icon that survives updates** — when a build is updated or removed, the taskbar shortcuts Windows keeps for Blender are pointed at an installed build of the same series, so Blender's button never turns blank.
 - **Notifications** — a background check (configurable interval) for new releases, new daily versions and updates to builds you have installed, delivered as native notifications and in the in-app notification center.
 - **News** — the latest posts from blender.org and the Blender Developers Blog.

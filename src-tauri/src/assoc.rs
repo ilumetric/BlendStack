@@ -63,10 +63,10 @@ pub fn blend_handler() -> BlendHandler {
 pub async fn set_blend_handler(app: AppHandle, enabled: bool) -> Result<BlendHandler> {
     #[cfg(windows)]
     {
-        let installed = app.state::<AppState>().installed();
+        let _ = app;
         tauri::async_runtime::spawn_blocking(move || {
             if enabled {
-                win::enable(&installed)
+                win::enable()
             } else {
                 win::disable()
             }
@@ -165,7 +165,7 @@ mod win {
     use super::{reg, shortcuts, BlendHandler};
     use crate::error::{msg, Result};
     use crate::launch::best_in_series;
-    use crate::model::{series, Channel, InstalledBuild, Version};
+    use crate::model::{series, InstalledBuild, Version};
     use std::path::{Path, PathBuf};
 
     /// Blend Stack's file type for .blend files.
@@ -180,6 +180,8 @@ mod win {
     const CAPABILITIES: &str = r"Software\BlendStack\Capabilities";
     const REGISTERED_APPS: &str = r"Software\RegisteredApplications";
     pub const DEFAULT_APPS_URL: &str = "ms-settings:defaultapps?registeredAppUser=Blend%20Stack";
+    /// Resource id of the .blend file icon in Blend Stack's executable (see build.rs).
+    const FILE_ICON: u16 = 2;
     /// Blender's Explorer thumbnail handler, registered by `blender --register`.
     const THUMBNAILER: &str = r"CLSID\{D45F043D-F17F-4e8a-8435-70971D9FA46D}\InProcServer32";
 
@@ -230,7 +232,7 @@ mod win {
         })
     }
 
-    pub fn enable(installed: &[InstalledBuild]) -> Result<()> {
+    pub fn enable() -> Result<()> {
         let exe = own_exe().ok_or_else(|| msg("cannot find the Blend Stack executable"))?;
         let ext = class(".blend");
         let key = class(PROG_ID);
@@ -239,11 +241,7 @@ mod win {
         if let Some(p) = &previous {
             reg::write(&key, Some(PREVIOUS), p)?;
         }
-        reg::write(
-            &format!(r"{key}\DefaultIcon"),
-            None,
-            &file_icon(installed, &exe),
-        )?;
+        reg::write(&format!(r"{key}\DefaultIcon"), None, &file_icon(&exe))?;
         reg::write(
             &format!(r"{key}\shell\open"),
             Some("FriendlyAppName"),
@@ -318,19 +316,21 @@ mod win {
     pub fn repair(installed: &[InstalledBuild]) -> bool {
         let mut changed = false;
 
-        // Blend Stack's own file type, after the app folder or the build its icon comes from moved.
+        // Blend Stack's own file type, after the app folder moved.
         let key = class(PROG_ID);
         let command_key = format!(r"{key}\shell\open\command");
-        if let (Some(command), Some(exe)) = (reg::read(&command_key, None), own_exe()) {
-            if !program_exists(&command) {
-                changed |= reg::write(&command_key, None, &open_command(&exe)).is_ok();
+        if let Some(mut command) = reg::read(&command_key, None) {
+            if let Some(exe) = own_exe().filter(|_| !program_exists(&command)) {
+                command = open_command(&exe);
+                changed |= reg::write(&command_key, None, &command).is_ok();
             }
-            let icon_key = format!(r"{key}\DefaultIcon");
-            let icon = reg::read(&icon_key, None).unwrap_or_default();
-            let wanted = file_icon(installed, &exe);
-            let own_icon = program(&icon).is_some_and(|p| same_file(&p, &exe));
-            if icon != wanted && (!program_exists(&icon) || own_icon) {
-                changed |= reg::write(&icon_key, None, &wanted).is_ok();
+            // The icon lives in the executable that opens the files.
+            if let Some(exe) = program(&command) {
+                let icon_key = format!(r"{key}\DefaultIcon");
+                let wanted = file_icon(&exe);
+                if reg::read(&icon_key, None).as_deref() != Some(wanted.as_str()) {
+                    changed |= reg::write(&icon_key, None, &wanted).is_ok();
+                }
             }
         }
 
@@ -411,17 +411,9 @@ mod win {
         format!("\"{}\" \"%1\"", exe.display())
     }
 
-    /// Blender's file icon, from a stable build when there is one, else Blend Stack's own.
-    fn file_icon(installed: &[InstalledBuild], exe: &Path) -> String {
-        installed
-            .iter()
-            .filter_map(|b| {
-                let stable = b.channel == Channel::Stable;
-                Some(((stable, Version::parse(&b.version)), launcher(b)?))
-            })
-            .max_by(|a, b| a.0.cmp(&b.0))
-            .map(|(_, launcher)| format!("\"{}\", 1", launcher.display()))
-            .unwrap_or_else(|| format!("\"{}\", 0", exe.display()))
+    /// The .blend icon built into Blend Stack: a negative index names a resource id.
+    fn file_icon(exe: &Path) -> String {
+        format!("\"{}\",-{FILE_ICON}", exe.display())
     }
 
     /// The program in a shell command or icon location:

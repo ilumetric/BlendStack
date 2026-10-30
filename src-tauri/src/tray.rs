@@ -31,6 +31,36 @@ pub fn show_main(app: &AppHandle) {
         let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
+        #[cfg(windows)]
+        if let Ok(hwnd) = w.hwnd() {
+            bring_to_front(hwnd.0);
+        }
+    }
+}
+
+/// Windows refuses to activate a window when another app has the foreground
+/// (a file opened from Explorer, the first window after a launch from the
+/// shell), and `set_focus` then only flashes the taskbar button. Sharing input
+/// with the foreground thread for a moment lifts that lock.
+#[cfg(windows)]
+fn bring_to_front(hwnd: *mut std::ffi::c_void) {
+    use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
+    };
+    unsafe {
+        let foreground = GetForegroundWindow();
+        if foreground == hwnd {
+            return;
+        }
+        let theirs = GetWindowThreadProcessId(foreground, std::ptr::null_mut());
+        let ours = GetCurrentThreadId();
+        let attached = theirs != 0 && theirs != ours && AttachThreadInput(ours, theirs, 1) != 0;
+        BringWindowToTop(hwnd);
+        SetForegroundWindow(hwnd);
+        if attached {
+            AttachThreadInput(ours, theirs, 0);
+        }
     }
 }
 
