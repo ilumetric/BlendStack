@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { FileBox } from "lucide-react";
 import { useStore } from "./store";
-import { t, useT } from "./i18n";
+import { languageDirection, t, useT } from "./i18n";
 import { api, errorText } from "./lib/api";
 import { TitleBar } from "./components/TitleBar";
 import { MenuHost } from "./components/Menu";
@@ -29,6 +29,7 @@ function useDocumentClasses() {
     if (theme && theme !== "system") root.dataset.theme = theme;
     else delete root.dataset.theme;
     root.lang = lang;
+    root.dir = languageDirection(lang);
   }, [system, theme, lang]);
 }
 

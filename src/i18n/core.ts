@@ -1,5 +1,6 @@
 import { en, type MessageKey } from "./en";
 import { ru } from "./ru";
+import { he } from "./he";
 import { de } from "./de";
 import { fr } from "./fr";
 import { es } from "./es";
@@ -12,11 +13,12 @@ import { ja } from "./ja";
 import { ko } from "./ko";
 import { zh } from "./zh";
 
-const dictionaries: Record<string, Record<MessageKey, string>> = { en, ru, de, fr, es, it, pt, pl, uk, tr, ja, ko, zh };
+const dictionaries: Record<string, Record<MessageKey, string>> = { en, ru, he, de, fr, es, it, pt, pl, uk, tr, ja, ko, zh };
 
 export const LANGUAGES = [
   { code: "en", name: "English" },
   { code: "ru", name: "Русский" },
+  { code: "he", name: "עברית" },
   { code: "de", name: "Deutsch" },
   { code: "fr", name: "Français" },
   { code: "es", name: "Español" },
@@ -31,8 +33,15 @@ export const LANGUAGES = [
 ];
 
 export function resolveLanguage(preferred: string | undefined): string {
-  const code = (preferred || navigator.language || "en").slice(0, 2).toLowerCase();
+  let code = (preferred || navigator.language || "en").slice(0, 2).toLowerCase();
+  if (code === "iw") code = "he"; // legacy code some systems still report for Hebrew
   return code in dictionaries ? code : "en";
+}
+
+const RTL = new Set(["he"]);
+
+export function languageDirection(lang: string): "rtl" | "ltr" {
+  return RTL.has(lang) ? "rtl" : "ltr";
 }
 
 export function translate(lang: string, key: MessageKey, vars?: Record<string, string | number>): string {

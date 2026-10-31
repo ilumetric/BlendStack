@@ -158,7 +158,7 @@ function EmptyHero() {
   const setTab = useStore((s) => s.setTab);
   const importBuild = useStore((s) => s.importBuild);
   return (
-    <div className="card empty-hero" style={{ marginRight: 8 }}>
+    <div className="card empty-hero" style={{ marginInlineEnd: 8 }}>
       <img src={logo} width={64} height={64} alt="" />
       <h2>{tr("library.empty.title")}</h2>
       <p>{tr("library.empty.body")}</p>
@@ -418,7 +418,7 @@ export function LibraryView() {
             title={collapsed ? tr("library.expand") : tr("library.collapse")}
             onClick={toggleRail}
           >
-            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+            {collapsed ? <PanelLeftOpen size={17} className="flip-rtl" /> : <PanelLeftClose size={17} className="flip-rtl" />}
           </button>
           <Segmented<FileSection>
             value={section}

@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { translate, type MessageKey, type Translate } from "./core";
 
-export { LANGUAGES, resolveLanguage, translate } from "./core";
+export { LANGUAGES, languageDirection, resolveLanguage, translate } from "./core";
 export type { MessageKey, Translate } from "./core";
 
 export function useT(): Translate {

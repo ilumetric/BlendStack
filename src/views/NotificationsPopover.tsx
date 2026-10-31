@@ -75,7 +75,7 @@ export function NotificationsPopover({ anchor, onClose }: { anchor: HTMLElement 
             <button
               key={n.id}
               className="row"
-              style={{ width: "100%", textAlign: "left", paddingLeft: 14 }}
+              style={{ width: "100%", textAlign: "start", paddingInlineStart: 14 }}
               onClick={() => {
                 if (!clickable) return;
                 if (n.kind === "app") useStore.getState().setSettingsOpen(true);

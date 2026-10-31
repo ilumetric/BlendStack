@@ -157,6 +157,7 @@ fn unread_from_title(title: &str) -> u32 {
 fn unread_text(language: &str, unread: u32) -> String {
     let label = match language.get(..2).unwrap_or("") {
         "ru" => "Непрочитанных сообщений",
+        "he" | "iw" => "הודעות שלא נקראו",
         "de" => "Ungelesene Nachrichten",
         "fr" => "Messages non lus",
         "es" => "Mensajes sin leer",

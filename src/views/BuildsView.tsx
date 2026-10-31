@@ -160,7 +160,7 @@ function GroupCard({ group, prevSeen, focus }: { group: Group; prevSeen: number;
           <span className="spacer" />
           {group.collapsible && group.builds.length > 1 && !hasFocus && !hasInstalledOld && (
             <button className="btn plain" onClick={() => setExpanded((v) => !v)}>
-              {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} className="flip-rtl" />}
               {expanded ? tr("builds.hideOlder") : tr("builds.showOlder", { count: hidden })}
             </button>
           )}

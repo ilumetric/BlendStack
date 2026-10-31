@@ -85,7 +85,7 @@ export function NewsView() {
             { value: "developers", label: tr("news.developers") },
           ]}
         />
-        <div className="toolbar-status" style={{ marginLeft: "auto" }}>
+        <div className="toolbar-status" style={{ marginInlineStart: "auto" }}>
           {!loading && list?.fetchedAt ? tr("builds.updated", { time: relativeTime(list.fetchedAt, lang) }) : null}
         </div>
         <button className="icon-btn" title={`${tr("common.refresh")} (Ctrl+R)`} onClick={() => loadNews(true)}>
