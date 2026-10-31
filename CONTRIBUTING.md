@@ -22,7 +22,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 - **Official builds only.** Blend Stack downloads exclusively from Blender Foundation servers (`download.blender.org`, `builder.blender.org`). Please don't add third-party forks or mirrors.
 - **Keep it fast.** Network and disk work belongs in Rust; the UI should never block on it. Cache what you fetch.
 - **Keep it calm.** The design follows macOS conventions: system font sizes, soft materials, few colors, no clutter. New UI should feel like it was always there.
-- **Translations.** Every user-facing string lives in `src/i18n/en.ts`. When you add one, add it to `src/i18n/ru.ts` too — TypeScript fails the build if a key is missing. New languages are welcome: copy `ru.ts`, translate, and register it in `src/i18n/core.ts`.
+- **Translations.** Every user-facing string lives in `src/i18n/en.ts`. When you add one, add it to every other file in `src/i18n/` too — TypeScript fails the build if a key is missing. New languages are welcome: copy `ru.ts`, translate, and register it in `src/i18n/core.ts`.
 - One topic per pull request, with a short description of *why*.
 
 ## Reporting bugs

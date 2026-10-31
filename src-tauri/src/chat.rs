@@ -153,6 +153,31 @@ fn unread_from_title(title: &str) -> u32 {
         .unwrap_or(0)
 }
 
+/// Notification text in the UI language; the count goes after a colon so no plural rules are needed.
+fn unread_text(language: &str, unread: u32) -> String {
+    let label = match language.get(..2).unwrap_or("") {
+        "ru" => "Непрочитанных сообщений",
+        "de" => "Ungelesene Nachrichten",
+        "fr" => "Messages non lus",
+        "es" => "Mensajes sin leer",
+        "it" => "Messaggi non letti",
+        "pt" => "Mensagens não lidas",
+        "pl" => "Nieprzeczytane wiadomości",
+        "uk" => "Непрочитаних повідомлень",
+        "tr" => "Okunmamış mesajlar",
+        "ja" => "未読メッセージ",
+        "ko" => "읽지 않은 메시지",
+        "zh" => "未读消息",
+        _ if unread == 1 => return "1 unread message".to_string(),
+        _ => return format!("{unread} unread messages"),
+    };
+    match language.get(..2) {
+        Some("fr") => format!("{label} : {unread}"),
+        Some("ja" | "zh") => format!("{label}：{unread}"),
+        _ => format!("{label}: {unread}"),
+    }
+}
+
 fn on_title(app: &AppHandle, title: &str) {
     let unread = unread_from_title(title);
     let previous = UNREAD.swap(unread, Ordering::Relaxed);
@@ -170,17 +195,16 @@ fn on_title(app: &AppHandle, title: &str) {
             .and_then(|w| w.is_focused().ok())
             .unwrap_or(false);
     if !watching {
-        let russian = state.settings().language.starts_with("ru")
-            || (state.settings().language.is_empty()
-                && sys_locale::get_locale().is_some_and(|l| l.starts_with("ru")));
-        let body = if russian {
-            format!("Непрочитанных сообщений: {unread}")
-        } else if unread == 1 {
-            "1 unread message".to_string()
-        } else {
-            format!("{unread} unread messages")
+        let language = match state.settings().language.as_str() {
+            "" => sys_locale::get_locale().unwrap_or_default(),
+            code => code.to_string(),
         };
-        notifications::show_system(app, "Blender Chat", &body, Target::Chat);
+        notifications::show_system(
+            app,
+            "Blender Chat",
+            &unread_text(&language, unread),
+            Target::Chat,
+        );
     }
 }
 

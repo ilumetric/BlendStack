@@ -43,7 +43,7 @@ Get them from [Releases](https://github.com/ilumetric/BlendStack/releases). On W
 - **Notifications** — a background check (configurable interval) for new releases, new daily versions and updates to builds you have installed, delivered as native notifications and in the in-app notification center.
 - **News** — the latest posts from blender.org and the Blender Developers Blog.
 - **System tray** quick-launch menu, start at login, close-to-tray.
-- **Native feel** — translucent Mica window on Windows 11 / vibrancy on macOS, light and dark themes, English and Russian UI.
+- **Native feel** — translucent Mica window on Windows 11 / vibrancy on macOS, light and dark themes, UI in 13 languages (English, Russian, German, French, Spanish, Italian, Portuguese, Polish, Ukrainian, Turkish, Japanese, Korean, Simplified Chinese).
 - **Self-contained on Windows** — one executable with everything built in; settings, cache, logs and Blender builds live in its folder.
 
 Blend Stack only ever downloads builds published by the Blender Foundation.
@@ -83,7 +83,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 src/                  React UI
   views/              Library, Builds, News, Settings, popovers
   components/         Reusable UI pieces (segmented control, menus, dialogs…)
-  i18n/               English and Russian strings
+  i18n/               UI strings, one file per language
   lib/                API bindings, types, build helpers, formatting
 src-tauri/src/        Rust backend
   sources/            Official build feeds (stable, daily, experimental) and news
